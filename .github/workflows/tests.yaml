@@ -1,0 +1,50 @@
+name: Run Tests
+
+on: [push]
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.5.7
+        terraform_wrapper: false
+
+    - name: Set up Go 1.22
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.22"
+
+    - name: golangci-lint
+      continue-on-error: true
+      uses: golangci/golangci-lint-action@v4
+      with:
+        args: --issues-exit-code=0 --timeout=5m
+
+    - name: Run tests
+      run: go test -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./... -v ./...
+      env:
+        TF_ACC: 1
+
+  changie:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release
+        uses: labd/changie-release-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          release-workflow: 'release.yaml'
