@@ -14,6 +14,12 @@ tasks:
       PLATFORM:
         sh: echo "$(go env GOOS)_$(go env GOARCH)"
 
+  codegen:
+    dir: internal/sdk/
+    cmds:
+      - oapi-codegen -config config-pim.yaml ../../specs/api-docs.yaml
+
+
   examples:
     dir: examples
     deps:

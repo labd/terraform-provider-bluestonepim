@@ -2,13 +2,11 @@ module github.com/labd/terraform-provider-bluestonepim
 
 go 1.22.1
 
-replace github.com/labd/bluestone-pim-go-sdk => /Users/mvantellingen/projects/bluestone/bluestone-go-sdk
 
 require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deepmap/oapi-codegen v1.16.2
 	github.com/hashicorp/terraform-plugin-framework v1.7.0
-	github.com/labd/bluestone-pim-go-sdk v0.0.0-00010101000000-000000000000
 )
 
 require (

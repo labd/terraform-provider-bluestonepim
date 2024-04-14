@@ -1,0 +1,7 @@
+package: pim
+output: pim/generated.go
+generate:
+  models: true
+  client: true
+compatibility:
+  circular-reference-limit: 40
