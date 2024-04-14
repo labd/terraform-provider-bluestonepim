@@ -27,7 +27,7 @@ tasks:
     cmds:
       - rm -f .terraform.lock.hcl
       - terraform init
-      - terraform plan
+      - terraform apply
 
   format:
     cmds:

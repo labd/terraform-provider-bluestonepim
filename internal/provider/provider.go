@@ -12,7 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_attribute"
 	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
@@ -91,6 +93,8 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 func (p *BluestonePimProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		category.NewResource,
+		attribute.NewResource,
+		category_attribute.NewResource,
 	}
 }
 

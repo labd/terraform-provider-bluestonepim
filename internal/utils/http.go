@@ -1,10 +1,14 @@
 package utils
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type LogTransport struct {
@@ -17,11 +21,11 @@ var DebugTransport = &LogTransport{
 
 func (c *LogTransport) RoundTrip(request *http.Request) (*http.Response, error) {
 	if os.Getenv("BSP_DEBUG") != "" {
-		logRequest(request)
+		logRequest(request.Context(), request)
 	}
 	response, err := c.transport.RoundTrip(request)
 	if os.Getenv("BSP_DEBUG") != "" {
-		logResponse(response, err)
+		logResponse(request.Context(), response, err)
 	}
 	return response, err
 }
@@ -38,16 +42,18 @@ const logResponseTemplate = `DEBUG:
 ----------------------------------------------------------------------
 `
 
-func logRequest(r *http.Request) {
+func logRequest(ctx context.Context, r *http.Request) {
 	body, err := httputil.DumpRequestOut(r, true)
 	if err != nil {
 		return
 	}
+	tflog.Info(ctx, fmt.Sprintf(logRequestTemplate, body))
 	log.Printf(logRequestTemplate, body)
 }
 
-func logResponse(r *http.Response, err error) {
+func logResponse(ctx context.Context, r *http.Response, err error) {
 	if err != nil {
+		tflog.Info(ctx, fmt.Sprintf(logResponseTemplate, err))
 		log.Printf(logResponseTemplate, err)
 		return
 	}
@@ -55,5 +61,6 @@ func logResponse(r *http.Response, err error) {
 	if err != nil {
 		return
 	}
+	tflog.Info(ctx, fmt.Sprintf(logRequestTemplate, body))
 	log.Printf(logResponseTemplate, body)
 }

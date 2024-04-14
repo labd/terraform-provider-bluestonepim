@@ -47,7 +47,42 @@ func GetCategoryByID(ctx context.Context, client *pim.ClientWithResponses, id st
 	return resource, nil
 }
 
-func CreateCategory(ctx context.Context, client *pim.ClientWithResponses, resource *Category) (*string, diag.Diagnostic) {
+func UpdateCategory(ctx context.Context, client *pim.ClientWithResponses, current *Category, resource *Category) (*Category, diag.Diagnostic) {
+	if (resource.Name.ValueString() != current.Name.ValueString()) ||
+		(resource.Number.ValueString() != current.Number.ValueString()) {
+		response, err := client.UpdateCatalogNodeWithResponse(ctx, resource.Id.ValueString(), nil,
+			pim.UpdateCatalogNodeJSONRequestBody{
+				Name:   resource.Name.ValueString(),
+				Number: utils.OptionalValueString(resource.Number),
+			})
+
+		if err != nil {
+			return nil, diag.NewErrorDiagnostic("Unable to update category", err.Error())
+		}
+
+		if d := utils.AssertStatusCode(response, http.StatusNoContent); d != nil {
+			return nil, d
+		}
+	}
+
+	if resource.ParentId.ValueString() != current.ParentId.ValueString() {
+		response, err := client.MoveCatalogNodeWithResponse(ctx, resource.Id.ValueString(), pim.MoveCatalogNodeJSONRequestBody{
+			ParentId: utils.OptionalValueString(resource.ParentId),
+		})
+
+		if err != nil {
+			return nil, diag.NewErrorDiagnostic("Unable to update category", err.Error())
+		}
+
+		if d := utils.AssertStatusCode(response, http.StatusNoContent); d != nil {
+			return nil, d
+		}
+	}
+
+	return GetCategoryByID(ctx, client, current.Id.ValueString())
+}
+
+func CreateCategory(ctx context.Context, client *pim.ClientWithResponses, resource *Category) (*Category, diag.Diagnostic) {
 	response, err := client.Create8WithResponse(ctx,
 		&pim.Create8Params{
 			Validation: "NAME",
@@ -64,16 +99,15 @@ func CreateCategory(ctx context.Context, client *pim.ClientWithResponses, resour
 		return nil, d
 	}
 
-	if response.StatusCode() != http.StatusCreated {
-		d := diag.NewErrorDiagnostic("Unexpected status code", fmt.Sprintf("Expected 201, got %d", response.StatusCode()))
+	if d := utils.AssertStatusCode(response, http.StatusCreated); d != nil {
 		return nil, d
 	}
 
 	if err != nil {
-		d := diag.NewErrorDiagnostic("Error creating subscription", err.Error())
+		d := diag.NewErrorDiagnostic("Error creating category", err.Error())
 		return nil, d
 	}
 
 	resourceId := response.HTTPResponse.Header.Get("Resource-Id")
-	return &resourceId, nil
+	return GetCategoryByID(ctx, client, resourceId)
 }

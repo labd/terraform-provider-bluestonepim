@@ -1,13 +1,15 @@
-package category
+package attribute
 
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
@@ -30,7 +32,7 @@ type Resource struct {
 
 // Metadata returns the data source type name.
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_category"
+	resp.TypeName = req.ProviderTypeName + "_attribute_definition"
 }
 
 // Schema defines the schema for the data source.
@@ -53,9 +55,12 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Description: "The name of the Category.",
 				Optional:    true,
 			},
-			"parent_id": schema.StringAttribute{
-				Description: "The ID of the parent Category.",
-				Optional:    true,
+			"data_type": schema.StringAttribute{
+				Description: "The data type of the attribute.",
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("boolean", "integer", "decimal", "date", "text"),
+				},
 			},
 		},
 	}
@@ -78,14 +83,14 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var resource Category
+	var resource AttributeDefinition
 	diags := req.Plan.Get(ctx, &resource)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := CreateCategory(ctx, r.client, &resource)
+	result, diag := CreateAttributeDefinition(ctx, r.client, &resource)
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
@@ -101,14 +106,14 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 // Read refreshes the Terraform state with the latest data.
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var current Category
+	var current AttributeDefinition
 	diags := req.State.Get(ctx, &current)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := GetCategoryByID(ctx, r.client, current.Id.ValueString())
+	result, diag := GetAttributeDefinitionByID(ctx, r.client, current.Id.ValueString())
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
@@ -125,7 +130,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
-	var plan Category
+	var plan AttributeDefinition
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -133,14 +138,14 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	// Retrieve values from state
-	var state Category
+	var state AttributeDefinition
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := UpdateCategory(ctx, r.client, &state, &plan)
+	result, diag := UpdateAttributeDefinition(ctx, r.client, &state, &plan)
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
@@ -156,10 +161,16 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Retrieve values from state
-	var state Resource
+	var state AttributeDefinition
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diag := DeleteAttributeDefinition(ctx, r.client, state.Id.ValueString())
+	if diag != nil {
+		resp.Diagnostics.Append(diag)
 		return
 	}
 }

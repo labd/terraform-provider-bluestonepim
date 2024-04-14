@@ -1,4 +1,4 @@
-package category
+package category_attribute
 
 import (
 	"context"
@@ -6,8 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 
 	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
@@ -30,7 +29,7 @@ type Resource struct {
 
 // Metadata returns the data source type name.
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_category"
+	resp.TypeName = req.ProviderTypeName + "_category_attribute"
 }
 
 // Schema defines the schema for the data source.
@@ -38,24 +37,18 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 	resp.Schema = schema.Schema{
 		Description: "",
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Description: "Platform-generated unique identifier of the Category.",
+			"category_id": schema.StringAttribute{
+				Description: "Category ID",
+				Required:    true,
+			},
+			"attribute_id": schema.StringAttribute{
+				Description: "Attribute definition ID",
+				Required:    true,
+			},
+			"mandatory": schema.BoolAttribute{
+				Description: "Force classification",
+				Default:     booldefault.StaticBool(false),
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"number": schema.StringAttribute{
-				MarkdownDescription: "Number",
-				Computed:            true,
-			},
-			"name": schema.StringAttribute{
-				Description: "The name of the Category.",
-				Optional:    true,
-			},
-			"parent_id": schema.StringAttribute{
-				Description: "The ID of the parent Category.",
-				Optional:    true,
 			},
 		},
 	}
@@ -78,14 +71,14 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var resource Category
+	var resource CategoryAttribute
 	diags := req.Plan.Get(ctx, &resource)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := CreateCategory(ctx, r.client, &resource)
+	result, diag := AssignAttributeDefinition(ctx, r.client, &resource)
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
@@ -101,14 +94,15 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 // Read refreshes the Terraform state with the latest data.
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var current Category
+	var current CategoryAttribute
 	diags := req.State.Get(ctx, &current)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := GetCategoryByID(ctx, r.client, current.Id.ValueString())
+	result, diag := GetCategoryAttributeByID(
+		ctx, r.client, current.CategoryId.ValueString(), current.AttributeId.ValueString())
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
@@ -125,7 +119,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
-	var plan Category
+	var plan CategoryAttribute
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -133,20 +127,14 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	// Retrieve values from state
-	var state Category
+	var state CategoryAttribute
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := UpdateCategory(ctx, r.client, &state, &plan)
-	if diag != nil {
-		resp.Diagnostics.Append(diag)
-		return
-	}
-
-	diags = resp.State.Set(ctx, result)
+	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -156,10 +144,16 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Retrieve values from state
-	var state Resource
+	var state CategoryAttribute
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diag := UnassignAttributeDefinition(ctx, r.client, state.CategoryId.ValueString(), state.AttributeId.ValueString())
+	if diag != nil {
+		resp.Diagnostics.Append(diag)
 		return
 	}
 }
