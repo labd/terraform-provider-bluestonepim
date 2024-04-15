@@ -67,8 +67,26 @@ func UpdateAttributeDefinition(
 	resource *CategoryAttribute,
 ) (*CategoryAttribute, diag.Diagnostic) {
 
+	if resource.Mandatory.ValueBool() != current.Mandatory.ValueBool() {
+		response, err := client.UpdateNodeAttributeValueWithResponse(ctx,
+			current.CategoryId.ValueString(),
+			current.AttributeId.ValueString(),
+			nil,
+			pim.UpdateNodeAttributeValueJSONRequestBody{
+				Mandatory: resource.Mandatory.ValueBoolPointer(),
+			},
+		)
+		if err != nil {
+			return nil, diag.NewErrorDiagnostic("Unable to update category", err.Error())
+		}
+
+		if d := utils.AssertStatusCode(response, http.StatusAccepted); d != nil {
+			return nil, d
+		}
+	}
+
 	return GetCategoryAttributeByID(
-		ctx, client, current.CategoryId.String(), current.AttributeId.String())
+		ctx, client, current.CategoryId.ValueString(), current.AttributeId.ValueString())
 }
 
 func AssignAttributeDefinition(
@@ -95,7 +113,14 @@ func AssignAttributeDefinition(
 		return nil, d
 	}
 
-	return GetCategoryAttributeByID(ctx, client, resource.CategoryId.ValueString(), resource.AttributeId.ValueString())
+	current := &CategoryAttribute{
+		CategoryId:  resource.CategoryId,
+		AttributeId: resource.AttributeId,
+	}
+
+	// We call the update here since the API doesn't support setting certain flags
+	// on creation.
+	return UpdateAttributeDefinition(ctx, client, current, resource)
 }
 
 func UnassignAttributeDefinition(
@@ -108,7 +133,7 @@ func UnassignAttributeDefinition(
 		return diag.NewErrorDiagnostic("Unable to remove attribute definition from category", err.Error())
 	}
 
-	if d := utils.AssertStatusCode(response, http.StatusCreated); d != nil {
+	if d := utils.AssertStatusCode(response, http.StatusNoContent); d != nil {
 		return d
 	}
 

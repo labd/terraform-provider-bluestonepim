@@ -47,8 +47,10 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 			"mandatory": schema.BoolAttribute{
 				Description: "Force classification",
-				Default:     booldefault.StaticBool(false),
+				Required:    false,
 				Computed:    true,
+				Optional:    true,
+				Default:     booldefault.StaticBool(false),
 			},
 		},
 	}
@@ -134,7 +136,13 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	diags = resp.State.Set(ctx, state)
+	result, diag := UpdateAttributeDefinition(ctx, r.client, &state, &plan)
+	if diag != nil {
+		resp.Diagnostics.Append(diag)
+		return
+	}
+
+	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

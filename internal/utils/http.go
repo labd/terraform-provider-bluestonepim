@@ -61,6 +61,6 @@ func logResponse(ctx context.Context, r *http.Response, err error) {
 	if err != nil {
 		return
 	}
-	tflog.Info(ctx, fmt.Sprintf(logRequestTemplate, body))
+	tflog.Info(ctx, fmt.Sprintf(logResponseTemplate, body))
 	log.Printf(logResponseTemplate, body)
 }

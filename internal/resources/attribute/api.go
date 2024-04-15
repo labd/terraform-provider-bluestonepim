@@ -43,10 +43,11 @@ func GetAttributeDefinitionByID(ctx context.Context, client *pim.ClientWithRespo
 	resource := resources[0]
 
 	result := &AttributeDefinition{
-		Id:       utils.NewStringValue(resource.Id),
-		Name:     types.StringValue(resource.Name),
-		Number:   utils.NewStringValue(resource.Number),
-		DataType: types.StringValue(string(*resource.DataType)),
+		Id:          utils.NewStringValue(resource.Id),
+		Name:        types.StringValue(resource.Name),
+		Number:      utils.NewStringValue(resource.Number),
+		DataType:    types.StringValue(string(*resource.DataType)),
+		ContentType: utils.NewStringValue(resource.ContentType),
 	}
 	return result, nil
 }
@@ -62,9 +63,10 @@ func CreateAttributeDefinition(ctx context.Context, client *pim.ClientWithRespon
 			Validation: utils.Ref(pim.Create2ParamsValidation("NAME")),
 		},
 		pim.Create2JSONRequestBody{
-			Name:     resource.Name.ValueString(),
-			Number:   utils.OptionalValueString(resource.Number),
-			DataType: utils.Ref(pim.SimpleAttributeDefinitionRequestDataType(resource.DataType.ValueString())),
+			Name:        resource.Name.ValueString(),
+			Number:      utils.OptionalValueString(resource.Number),
+			DataType:    utils.Ref(pim.SimpleAttributeDefinitionRequestDataType(resource.DataType.ValueString())),
+			ContentType: resource.ContentType.ValueStringPointer(),
 		},
 	)
 
