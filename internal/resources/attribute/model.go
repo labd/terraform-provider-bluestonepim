@@ -8,4 +8,6 @@ type AttributeDefinition struct {
 	Number      types.String `tfsdk:"number"`
 	DataType    types.String `tfsdk:"data_type"`
 	ContentType types.String `tfsdk:"content_type"`
+	Description types.String `tfsdk:"description"`
+	Unit        types.String `tfsdk:"unit"`
 }

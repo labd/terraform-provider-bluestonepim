@@ -13,6 +13,7 @@ import (
 )
 
 func GetAttributeDefinitionByID(ctx context.Context, client *pim.ClientWithResponses, id string) (*AttributeDefinition, diag.Diagnostic) {
+	// TODO: Retry on 409
 	response, err := client.FindFilteredWithResponse(ctx, nil, pim.FindFilteredJSONRequestBody{
 		Filters: utils.Ref([]pim.AttributeDefinitionFilterDto{
 			{
@@ -48,11 +49,25 @@ func GetAttributeDefinitionByID(ctx context.Context, client *pim.ClientWithRespo
 		Number:      utils.NewStringValue(resource.Number),
 		DataType:    types.StringValue(string(*resource.DataType)),
 		ContentType: utils.NewStringValue(resource.ContentType),
+		Unit:        utils.NewStringValue(resource.Unit),
 	}
 	return result, nil
 }
 
 func UpdateAttributeDefinition(ctx context.Context, client *pim.ClientWithResponses, current *AttributeDefinition, resource *AttributeDefinition) (*AttributeDefinition, diag.Diagnostic) {
+	if (resource.Name.ValueString() != current.Name.ValueString()) ||
+		(resource.Number.ValueString() != current.Number.ValueString()) {
+		client.UpdateMetadataWithResponse(ctx, current.Id.ValueString(),
+			&pim.UpdateMetadataParams{},
+			pim.UpdateMetadataJSONRequestBody{
+				Name: &pim.PropertyUpdateString{
+					Value: resource.Name.ValueStringPointer(),
+				},
+				Number: &pim.PropertyUpdateString{
+					Value: resource.Number.ValueStringPointer(),
+				},
+			})
+	}
 
 	return GetAttributeDefinitionByID(ctx, client, current.Id.ValueString())
 }
@@ -67,6 +82,7 @@ func CreateAttributeDefinition(ctx context.Context, client *pim.ClientWithRespon
 			Number:      utils.OptionalValueString(resource.Number),
 			DataType:    utils.Ref(pim.SimpleAttributeDefinitionRequestDataType(resource.DataType.ValueString())),
 			ContentType: resource.ContentType.ValueStringPointer(),
+			Unit:        utils.OptionalValueString(resource.Unit),
 		},
 	)
 

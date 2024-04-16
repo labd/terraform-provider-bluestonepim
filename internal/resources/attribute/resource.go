@@ -62,6 +62,9 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Validators: []validator.String{
 					stringvalidator.OneOf("boolean", "integer", "decimal", "date", "text", "formatted_text"),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"content_type": schema.StringAttribute{
 				Description: "The content type of the attribute.",
@@ -71,6 +74,16 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					stringvalidator.OneOf("text/markdown", "html"),
 				},
 				Default: stringdefault.StaticString("text/markdown"),
+			},
+			"description": schema.StringAttribute{
+				Description: "The description of the attribute.",
+				Optional:    true,
+			},
+			// TODO: Create a validator so that this field can only be set if the
+			// data_type is integer or decimal
+			"unit": schema.StringAttribute{
+				Description: "The unit of the attribute.",
+				Optional:    true,
 			},
 		},
 	}
