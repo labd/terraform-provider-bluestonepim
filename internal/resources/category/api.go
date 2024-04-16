@@ -30,6 +30,10 @@ func GetCategoryByID(ctx context.Context, client *pim.ClientWithResponses, id st
 	}
 
 	categories := *response.JSON200.Data
+	if (len(categories)) == 0 {
+		return nil, nil
+	}
+
 	if len(categories) != 1 {
 		return nil, diag.NewErrorDiagnostic(
 			"Unexpected data",
@@ -110,4 +114,17 @@ func CreateCategory(ctx context.Context, client *pim.ClientWithResponses, resour
 
 	resourceId := response.HTTPResponse.Header.Get("Resource-Id")
 	return GetCategoryByID(ctx, client, resourceId)
+}
+
+func DeleteCategory(ctx context.Context, client *pim.ClientWithResponses, resource *Category) diag.Diagnostic {
+	response, err := client.DeleteCategoryNodeWithResponse(ctx, resource.Id.ValueString())
+	if err != nil {
+		return diag.NewErrorDiagnostic("Unable to delete category", err.Error())
+	}
+
+	if d := utils.AssertStatusCode(response, http.StatusNoContent); d != nil {
+		return d
+	}
+
+	return nil
 }
