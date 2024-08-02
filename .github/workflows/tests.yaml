@@ -7,7 +7,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - uses: hashicorp/setup-terraform@v3
       with:
@@ -21,7 +21,7 @@ jobs:
 
     - name: golangci-lint
       continue-on-error: true
-      uses: golangci/golangci-lint-action@v4
+      uses: golangci/golangci-lint-action@v6
       with:
         args: --issues-exit-code=0 --timeout=5m
 
