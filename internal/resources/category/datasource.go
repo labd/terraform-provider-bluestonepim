@@ -34,12 +34,12 @@ func (d *DataSource) Schema(ctx context.Context, req datasource.SchemaRequest, r
 				MarkdownDescription: "Identifier",
 				Optional:            true,
 			},
-			"name": schema.StringAttribute{
-				MarkdownDescription: "Name",
-				Computed:            true,
-			},
 			"number": schema.StringAttribute{
 				MarkdownDescription: "Number",
+				Optional:            true,
+			},
+			"name": schema.StringAttribute{
+				MarkdownDescription: "Name",
 				Computed:            true,
 			},
 			"parent_id": schema.StringAttribute{

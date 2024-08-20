@@ -44,8 +44,8 @@ func GetCategoryAttributeByID(
 		}
 
 		result := &CategoryAttribute{
-			CategoryId:  types.StringValue(categoryId),
-			AttributeId: types.StringValue(attributeId),
+			CategoryId:            types.StringValue(categoryId),
+			AttributeDefinitionId: types.StringValue(attributeId),
 		}
 
 		if resource.MandatorySetOn != nil {
@@ -70,7 +70,7 @@ func UpdateAttributeDefinition(
 	if resource.Mandatory.ValueBool() != current.Mandatory.ValueBool() {
 		response, err := client.UpdateNodeAttributeValueWithResponse(ctx,
 			current.CategoryId.ValueString(),
-			current.AttributeId.ValueString(),
+			current.AttributeDefinitionId.ValueString(),
 			nil,
 			pim.UpdateNodeAttributeValueJSONRequestBody{
 				Mandatory: resource.Mandatory.ValueBoolPointer(),
@@ -86,7 +86,7 @@ func UpdateAttributeDefinition(
 	}
 
 	return GetCategoryAttributeByID(
-		ctx, client, current.CategoryId.ValueString(), current.AttributeId.ValueString())
+		ctx, client, current.CategoryId.ValueString(), current.AttributeDefinitionId.ValueString())
 }
 
 func AssignAttributeDefinition(
@@ -97,7 +97,7 @@ func AssignAttributeDefinition(
 
 	response, err := client.CreateCatalogNodeAttributeWithResponse(ctx,
 		resource.CategoryId.ValueString(),
-		resource.AttributeId.ValueString(),
+		resource.AttributeDefinitionId.ValueString(),
 		&pim.CreateCatalogNodeAttributeParams{
 			ForceCla: utils.Ref(true),
 		},
@@ -114,8 +114,8 @@ func AssignAttributeDefinition(
 	}
 
 	current := &CategoryAttribute{
-		CategoryId:  resource.CategoryId,
-		AttributeId: resource.AttributeId,
+		CategoryId:            resource.CategoryId,
+		AttributeDefinitionId: resource.AttributeDefinitionId,
 	}
 
 	// We call the update here since the API doesn't support setting certain flags

@@ -1,4 +1,4 @@
-package attribute
+package attribute_definition
 
 import (
 	"context"
@@ -48,8 +48,10 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			//TODO: number will be set to be id if not provided
 			"number": schema.StringAttribute{
 				MarkdownDescription: "Number",
+				Optional:            true,
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
@@ -79,8 +81,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Description: "The description of the attribute.",
 				Optional:    true,
 			},
-			// TODO: Create a validator so that this field can only be set if the
-			// data_type is integer or decimal
+			// TODO: Create a validator so that this field can only be set if the data_type is integer or decimal
 			"unit": schema.StringAttribute{
 				Description: "The unit of the attribute.",
 				Optional:    true,
@@ -106,14 +107,14 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var resource AttributeDefinition
-	diags := req.Plan.Get(ctx, &resource)
+	var plan AttributeDefinition
+	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := CreateAttributeDefinition(ctx, r.client, &resource)
+	result, diag := CreateAttributeDefinition(ctx, r.client, &plan)
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return

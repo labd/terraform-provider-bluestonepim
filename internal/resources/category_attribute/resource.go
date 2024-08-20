@@ -41,13 +41,12 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Description: "Category ID",
 				Required:    true,
 			},
-			"attribute_id": schema.StringAttribute{
+			"attribute_definition_id": schema.StringAttribute{
 				Description: "Attribute definition ID",
 				Required:    true,
 			},
 			"mandatory": schema.BoolAttribute{
 				Description: "Force classification",
-				Required:    false,
 				Computed:    true,
 				Optional:    true,
 				Default:     booldefault.StaticBool(false),
@@ -73,14 +72,14 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var resource CategoryAttribute
-	diags := req.Plan.Get(ctx, &resource)
+	var plan CategoryAttribute
+	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := AssignAttributeDefinition(ctx, r.client, &resource)
+	result, diag := AssignAttributeDefinition(ctx, r.client, &plan)
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
@@ -104,7 +103,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 
 	result, diag := GetCategoryAttributeByID(
-		ctx, r.client, current.CategoryId.ValueString(), current.AttributeId.ValueString())
+		ctx, r.client, current.CategoryId.ValueString(), current.AttributeDefinitionId.ValueString())
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
@@ -159,7 +158,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	diag := UnassignAttributeDefinition(ctx, r.client, state.CategoryId.ValueString(), state.AttributeId.ValueString())
+	diag := UnassignAttributeDefinition(ctx, r.client, state.CategoryId.ValueString(), state.AttributeDefinitionId.ValueString())
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
