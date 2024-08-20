@@ -14,10 +14,10 @@ import (
 
 func GetAttributeDefinitionByID(ctx context.Context, client *pim.ClientWithResponses, id string) (*AttributeDefinition, diag.Diagnostic) {
 	// TODO: Retry on 409
-	response, err := client.FindFilteredWithResponse(ctx, nil, pim.FindFilteredJSONRequestBody{
+	response, err := client.FindFilteredAttributeDefinitionsWithResponse(ctx, nil, pim.FindFilteredAttributeDefinitionsJSONRequestBody{
 		Filters: utils.Ref([]pim.AttributeDefinitionFilterDto{
 			{
-				Type:   utils.Ref(pim.AttributeDefinitionFilterDtoType("ID_IN")),
+				Type:   utils.Ref[pim.AttributeDefinitionFilterDtoType]("ID_IN"),
 				Values: utils.Ref([]string{id}),
 			},
 		}),
@@ -73,11 +73,11 @@ func UpdateAttributeDefinition(ctx context.Context, client *pim.ClientWithRespon
 }
 
 func CreateAttributeDefinition(ctx context.Context, client *pim.ClientWithResponses, resource *AttributeDefinition) (*AttributeDefinition, diag.Diagnostic) {
-	response, err := client.Create2WithResponse(ctx,
-		&pim.Create2Params{
-			Validation: utils.Ref(pim.Create2ParamsValidation("NAME")),
+	response, err := client.CreateAttributeDefinitionWithResponse(ctx,
+		&pim.CreateAttributeDefinitionParams{
+			Validation: utils.Ref[pim.CreateAttributeDefinitionParamsValidation]("NAME"),
 		},
-		pim.Create2JSONRequestBody{
+		pim.CreateAttributeDefinitionJSONRequestBody{
 			Name:        resource.Name.ValueString(),
 			Number:      utils.OptionalValueString(resource.Number),
 			DataType:    utils.Ref(pim.SimpleAttributeDefinitionRequestDataType(resource.DataType.ValueString())),
@@ -95,17 +95,12 @@ func CreateAttributeDefinition(ctx context.Context, client *pim.ClientWithRespon
 		return nil, d
 	}
 
-	if err != nil {
-		d := diag.NewErrorDiagnostic("Error creating attribute definition", err.Error())
-		return nil, d
-	}
-
 	resourceId := response.HTTPResponse.Header.Get("Resource-Id")
 	return GetAttributeDefinitionByID(ctx, client, resourceId)
 }
 
 func DeleteAttributeDefinition(ctx context.Context, client *pim.ClientWithResponses, id string) diag.Diagnostic {
-	response, err := client.Delete2WithResponse(ctx, id)
+	response, err := client.DeleteAttributeDefinitionWithResponse(ctx, id)
 	if err != nil {
 		return diag.NewErrorDiagnostic("Unable to delete attribute definition", err.Error())
 	}

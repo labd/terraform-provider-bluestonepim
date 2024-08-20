@@ -1,24 +1,19 @@
 version: '3'
 
 tasks:
-  build-local:
-    cmds:
-      - go build -o terraform-provider-{{ .NAME }}_{{ .VERSION }}
-      - mkdir -p ~/.terraform.d/plugins/registry.terraform.io/labd/{{ .NAME }}/{{ .VERSION }}/{{ .PLATFORM }}/
-      - mv terraform-provider-{{ .NAME }}_{{ .VERSION }} ~/.terraform.d/plugins/registry.terraform.io/labd/{{ .NAME }}/{{ .VERSION }}/{{ .PLATFORM }}/terraform-provider-{{ .NAME }}_v{{ .VERSION }}
-      - cmd: codesign --deep --force -s - ~/.terraform.d/plugins/registry.terraform.io/labd/{{ .NAME }}/{{ .VERSION }}/{{ .PLATFORM }}/terraform-provider-{{ .NAME }}_v{{ .VERSION }}
-        platforms: [darwin]
-    vars:
-      VERSION: 99.0.0
-      NAME: bluestonepim
-      PLATFORM:
-        sh: echo "$(go env GOOS)_$(go env GOARCH)"
+  build:
+    env:
+      GORELEASER_CURRENT_TAG: "v0.0.0"
+    cmd: goreleaser build --snapshot --clean --single-target --output terraform-provider-bluestonepim
 
   codegen:
-    dir: internal/sdk/
     cmds:
-      - oapi-codegen -config config-pim.yaml ../../specs/api-docs.yaml
+      - task: codegen:pim
 
+  codegen:pim:
+    dir: internal/sdk/pim
+    cmds:
+      - oapi-codegen -config config.yaml https://docs.api.bluestonepim.com/openapi/66557c17ba1fbb0011cf1af6
 
   examples:
     dir: examples
