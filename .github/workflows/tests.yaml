@@ -14,10 +14,10 @@ jobs:
         terraform_version: 1.5.7
         terraform_wrapper: false
 
-    - name: Set up Go 1.22
+    - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: "1.22"
+        go-version-file: go.mod
 
     - name: golangci-lint
       continue-on-error: true
