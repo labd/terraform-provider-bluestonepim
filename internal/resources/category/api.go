@@ -87,11 +87,11 @@ func UpdateCategory(ctx context.Context, client *pim.ClientWithResponses, curren
 }
 
 func CreateCategory(ctx context.Context, client *pim.ClientWithResponses, resource *Category) (*Category, diag.Diagnostic) {
-	response, err := client.Create8WithResponse(ctx,
-		&pim.Create8Params{
+	response, err := client.CreateCategoryWithResponse(ctx,
+		&pim.CreateCategoryParams{
 			Validation: "NAME",
 		},
-		pim.Create8JSONRequestBody{
+		pim.CreateCategoryJSONRequestBody{
 			Name:     resource.Name.ValueString(),
 			Number:   utils.OptionalValueString(resource.Number),
 			ParentId: utils.OptionalValueString(resource.ParentId),
@@ -104,11 +104,6 @@ func CreateCategory(ctx context.Context, client *pim.ClientWithResponses, resour
 	}
 
 	if d := utils.AssertStatusCode(response, http.StatusCreated); d != nil {
-		return nil, d
-	}
-
-	if err != nil {
-		d := diag.NewErrorDiagnostic("Error creating category", err.Error())
 		return nil, d
 	}
 

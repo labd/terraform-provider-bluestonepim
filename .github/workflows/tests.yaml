@@ -30,6 +30,13 @@ jobs:
       env:
         TF_ACC: 1
 
+    - name: build binary
+      uses: goreleaser/goreleaser-action@v6
+      with:
+        args: build --snapshot --clean --single-target
+      env:
+        GOPATH: ${{ env.GOPATH }}
+
   changie:
     runs-on: ubuntu-latest
     needs: test

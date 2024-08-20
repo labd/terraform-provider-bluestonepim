@@ -1,5 +1,5 @@
 package: pim
-output: pim/generated.go
+output: generated.go
 generate:
   models: true
   client: true
