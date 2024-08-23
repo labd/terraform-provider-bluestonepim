@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/notifications"
+	"github.com/labd/bluestonepim-go-sdk/notification_external"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -26,7 +26,7 @@ func NewResource() resource.Resource {
 }
 
 type Resource struct {
-	client *notifications.ClientWithResponses
+	client *notification_external.ClientWithResponses
 }
 
 // Metadata returns the data source type name.

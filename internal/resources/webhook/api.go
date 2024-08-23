@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/notifications"
+	"github.com/labd/bluestonepim-go-sdk/notification_external"
 	"slices"
 )
 
@@ -13,7 +13,7 @@ const ResourceIdHeader = "Resource-Id"
 
 func GetWebhookByID(
 	ctx context.Context,
-	client *notifications.ClientWithResponses,
+	client *notification_external.ClientWithResponses,
 	id string,
 ) (*Webhook, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
@@ -61,11 +61,11 @@ func GetWebhookByID(
 
 func CreateWebhook(
 	ctx context.Context,
-	client *notifications.ClientWithResponses,
+	client *notification_external.ClientWithResponses,
 	current *Webhook,
 ) (*Webhook, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
-	webhookRes, err := client.Create(ctx, notifications.CreateJSONRequestBody{
+	webhookRes, err := client.Create(ctx, notification_external.CreateJSONRequestBody{
 		Secret: current.Secret.ValueString(),
 		Url:    current.URL.ValueString(),
 		Active: current.Active.ValueBool(),
@@ -89,13 +89,13 @@ func CreateWebhook(
 		return nil, diags
 	}
 
-	var eventTypes []notifications.WebhookEventTypeListRequestEventTypes
+	var eventTypes []notification_external.WebhookEventTypeListRequestEventTypes
 	diags = current.EventTypes.ElementsAs(ctx, &eventTypes, false)
 	if diags.HasError() {
 		return nil, diags
 	}
 
-	subscriptionRes, err := client.Subscribe(ctx, id, notifications.SubscribeJSONRequestBody{EventTypes: eventTypes})
+	subscriptionRes, err := client.Subscribe(ctx, id, notification_external.SubscribeJSONRequestBody{EventTypes: eventTypes})
 	if err != nil {
 		diags.AddError("Failed adding subscriptions to webhook", err.Error())
 		return nil, diags
@@ -113,14 +113,14 @@ func CreateWebhook(
 
 func UpdateWebhookById(
 	ctx context.Context,
-	client *notifications.ClientWithResponses,
+	client *notification_external.ClientWithResponses,
 	id string,
 	current *Webhook,
 	planned *Webhook,
 ) (*Webhook, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 	if !(current.ID.Equal(planned.ID) && current.Secret.Equal(planned.Secret) && current.URL.Equal(planned.URL) && current.Active.Equal(planned.Active)) {
-		updateRes, err := client.Update(ctx, id, notifications.UpdateJSONRequestBody{
+		updateRes, err := client.Update(ctx, id, notification_external.UpdateJSONRequestBody{
 			Secret: planned.Secret.ValueStringPointer(),
 			Url:    planned.URL.ValueStringPointer(),
 			Active: planned.Active.ValueBoolPointer(),
@@ -139,19 +139,19 @@ func UpdateWebhookById(
 	}
 
 	if !current.EventTypes.Equal(planned.EventTypes) {
-		var currentEventTypes []notifications.WebhookEventTypeListRequestEventTypes
+		var currentEventTypes []notification_external.WebhookEventTypeListRequestEventTypes
 		diags = current.EventTypes.ElementsAs(ctx, &currentEventTypes, false)
 		if diags.HasError() {
 			return nil, diags
 		}
 
-		var plannedEventTypes []notifications.WebhookEventTypeListRequestEventTypes
+		var plannedEventTypes []notification_external.WebhookEventTypeListRequestEventTypes
 		diags = planned.EventTypes.ElementsAs(ctx, &plannedEventTypes, false)
 		if diags.HasError() {
 			return nil, diags
 		}
 
-		var unsubscribeEventTypes []notifications.WebhookEventTypeListRequestEventTypes
+		var unsubscribeEventTypes []notification_external.WebhookEventTypeListRequestEventTypes
 		for _, currentEventType := range currentEventTypes {
 			if slices.Contains(plannedEventTypes, currentEventType) {
 				continue
@@ -159,7 +159,7 @@ func UpdateWebhookById(
 			unsubscribeEventTypes = append(unsubscribeEventTypes, currentEventType)
 		}
 		if len(unsubscribeEventTypes) > 0 {
-			res, err := client.UnsubscribeWithResponse(ctx, id, notifications.UnsubscribeJSONRequestBody{EventTypes: unsubscribeEventTypes})
+			res, err := client.UnsubscribeWithResponse(ctx, id, notification_external.UnsubscribeJSONRequestBody{EventTypes: unsubscribeEventTypes})
 			if err != nil {
 				diags.AddError("Failed removing subscriptions from webhook", err.Error())
 				return nil, diags
@@ -177,7 +177,7 @@ func UpdateWebhookById(
 			}
 		}
 
-		var subscribeEventTypes []notifications.WebhookEventTypeListRequestEventTypes
+		var subscribeEventTypes []notification_external.WebhookEventTypeListRequestEventTypes
 		for _, plannedEventType := range plannedEventTypes {
 			if slices.Contains(currentEventTypes, plannedEventType) {
 				continue
@@ -186,7 +186,7 @@ func UpdateWebhookById(
 		}
 
 		if len(subscribeEventTypes) > 0 {
-			res, err := client.SubscribeWithResponse(ctx, id, notifications.SubscribeJSONRequestBody{EventTypes: subscribeEventTypes})
+			res, err := client.SubscribeWithResponse(ctx, id, notification_external.SubscribeJSONRequestBody{EventTypes: subscribeEventTypes})
 			if err != nil {
 				diags.AddError("Failed adding subscriptions to webhook", err.Error())
 				return nil, diags
@@ -211,7 +211,7 @@ func UpdateWebhookById(
 
 func DeleteWebhookByID(
 	ctx context.Context,
-	client *notifications.ClientWithResponses,
+	client *notification_external.ClientWithResponses,
 	id string,
 ) diag.Diagnostics {
 	diags := diag.Diagnostics{}

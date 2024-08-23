@@ -1,13 +1,15 @@
 module github.com/labd/terraform-provider-bluestonepim
 
-go 1.22.1
+go 1.22.5
+
+toolchain go1.22.6
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.19.4
 	github.com/hashicorp/terraform-plugin-framework v1.10.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.13.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
-	github.com/oapi-codegen/runtime v1.1.1
+	github.com/labd/bluestonepim-go-sdk v0.0.0-20240823102937-6f8f1edbe1ef
 	golang.org/x/oauth2 v0.17.0
 )
 
@@ -51,6 +53,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
+	github.com/oapi-codegen/runtime v1.1.1 // indirect
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/posener/complete v1.2.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect

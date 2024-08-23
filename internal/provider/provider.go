@@ -8,8 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/labd/bluestonepim-go-sdk/notification_external"
+	"github.com/labd/bluestonepim-go-sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/webhook"
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/notifications"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 	"net/http"
@@ -17,7 +18,6 @@ import (
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_definition"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_attribute"
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
@@ -141,9 +141,9 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 		panic(err)
 	}
 
-	notificationsClient, err := notifications.NewClientWithResponses(
+	notificationsClient, err := notification_external.NewClientWithResponses(
 		fmt.Sprintf("%s/notification-external", apiURL),
-		notifications.WithHTTPClient(httpClient),
+		notification_external.WithHTTPClient(httpClient),
 	)
 	if err != nil {
 		panic(err)

@@ -2,11 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"github.com/labd/bluestonepim-go-sdk/pim"
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 )
 
 type Response interface {
