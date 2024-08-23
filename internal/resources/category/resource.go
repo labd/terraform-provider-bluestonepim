@@ -2,6 +2,7 @@ package category
 
 import (
 	"context"
+	"github.com/labd/bluestonepim-go-sdk/pim"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -9,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
@@ -36,11 +36,11 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 // Schema defines the schema for the data source.
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "",
+		MarkdownDescription: "",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Platform-generated unique identifier of the Category.",
-				Computed:    true,
+				MarkdownDescription: "Platform-generated unique identifier of the Category.",
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -50,12 +50,12 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				Description: "The name of the Category.",
-				Optional:    true,
+				MarkdownDescription: "The name of the Category.",
+				Optional:            true,
 			},
 			"parent_id": schema.StringAttribute{
-				Description: "The ID of the parent Category.",
-				Optional:    true,
+				MarkdownDescription: "The ID of the parent Category.",
+				Optional:            true,
 			},
 		},
 	}
@@ -73,7 +73,7 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 		return
 	}
 
-	r.client = data.Client
+	r.client = data.PimClient
 }
 
 // Create creates the resource and sets the initial Terraform state.

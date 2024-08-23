@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
+	"github.com/labd/bluestonepim-go-sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 

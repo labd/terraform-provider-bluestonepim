@@ -2,13 +2,13 @@ package category_attribute
 
 import (
 	"context"
+	"github.com/labd/bluestonepim-go-sdk/pim"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
@@ -35,21 +35,21 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 // Schema defines the schema for the data source.
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "",
+		MarkdownDescription: "",
 		Attributes: map[string]schema.Attribute{
 			"category_id": schema.StringAttribute{
-				Description: "Category ID",
-				Required:    true,
+				MarkdownDescription: "Category ID",
+				Required:            true,
 			},
 			"attribute_definition_id": schema.StringAttribute{
-				Description: "Attribute definition ID",
-				Required:    true,
+				MarkdownDescription: "Attribute definition ID",
+				Required:            true,
 			},
 			"mandatory": schema.BoolAttribute{
-				Description: "Force classification",
-				Computed:    true,
-				Optional:    true,
-				Default:     booldefault.StaticBool(false),
+				MarkdownDescription: "Force classification",
+				Computed:            true,
+				Optional:            true,
+				Default:             booldefault.StaticBool(false),
 			},
 		},
 	}
@@ -67,7 +67,7 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 		return
 	}
 
-	r.client = data.Client
+	r.client = data.PimClient
 }
 
 // Create creates the resource and sets the initial Terraform state.

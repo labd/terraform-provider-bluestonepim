@@ -2,11 +2,11 @@ package category
 
 import (
 	"context"
+	"github.com/labd/bluestonepim-go-sdk/pim"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
@@ -61,7 +61,7 @@ func (d *DataSource) Configure(ctx context.Context, req datasource.ConfigureRequ
 		return
 	}
 
-	d.client = data.Client
+	d.client = data.PimClient
 }
 
 func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

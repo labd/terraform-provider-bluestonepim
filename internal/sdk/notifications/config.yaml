@@ -1,7 +1,0 @@
-package: notifications
-output: generated.go
-generate:
-  models: true
-  client: true
-compatibility:
-  circular-reference-limit: 40

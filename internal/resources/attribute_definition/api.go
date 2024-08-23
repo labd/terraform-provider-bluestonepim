@@ -3,12 +3,12 @@ package attribute_definition
 import (
 	"context"
 	"fmt"
+	"github.com/labd/bluestonepim-go-sdk/pim"
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
