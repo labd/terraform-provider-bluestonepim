@@ -9,11 +9,17 @@ tasks:
   codegen:
     cmds:
       - task: codegen:pim
+      - task: codegen:notifications
 
   codegen:pim:
     dir: internal/sdk/pim
     cmds:
       - oapi-codegen -config config.yaml https://docs.api.bluestonepim.com/openapi/66557c17ba1fbb0011cf1af6
+
+  codegen:notifications:
+    dir: internal/sdk/notifications
+    cmds:
+      - oapi-codegen -config config.yaml https://mapi.bluestonepim.com/notification-external/v2/api-docs
 
   examples:
     dir: examples
@@ -34,7 +40,7 @@ tasks:
 
   docs:
     cmds:
-      - go generate
+      - go generate ./...
 
   coverage:
     cmds:

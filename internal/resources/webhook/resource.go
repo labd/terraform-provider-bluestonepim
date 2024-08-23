@@ -1,14 +1,16 @@
-package category_attribute
+package webhook
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/notifications"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-
-	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
@@ -24,32 +26,50 @@ func NewResource() resource.Resource {
 }
 
 type Resource struct {
-	client *pim.ClientWithResponses
+	client *notifications.ClientWithResponses
 }
 
 // Metadata returns the data source type name.
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_category_attribute"
+	resp.TypeName = req.ProviderTypeName + "_webhook"
 }
 
 // Schema defines the schema for the data source.
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "",
+		MarkdownDescription: "External systems can be notified about relevant events in Bluestone PIM via webhooks. " +
+			"Selected event notifications are posted to the given external URL. See " +
+			"[the documentation](https://help.bluestonepim.com/work-with-events) for more information.",
 		Attributes: map[string]schema.Attribute{
-			"category_id": schema.StringAttribute{
-				MarkdownDescription: "Category ID",
+			"id": schema.StringAttribute{
+				MarkdownDescription: "Webhook identifier",
+				Computed:            true,
+			},
+			"secret": schema.StringAttribute{
+				MarkdownDescription: "A password made by a subscriber. It can be used to validate that the message is " +
+					"legitimate. All messages will be signed with a SHA256 hash based on the request payload and " +
+					"this secret. This signature will be included in the request header x-bs-signature.",
+				Required:  true,
+				Sensitive: true,
+			},
+			"url": schema.StringAttribute{
+				MarkdownDescription: "The URL that receives the message. This will always be an HTTP(s) POST.",
 				Required:            true,
 			},
-			"attribute_definition_id": schema.StringAttribute{
-				MarkdownDescription: "Attribute definition ID",
-				Required:            true,
-			},
-			"mandatory": schema.BoolAttribute{
-				MarkdownDescription: "Force classification",
+			"active": schema.BoolAttribute{
+				MarkdownDescription: "Messages will not be posted to webhook if inactive.",
 				Computed:            true,
 				Optional:            true,
-				Default:             booldefault.StaticBool(false),
+				Default:             booldefault.StaticBool(true),
+			},
+			"event_types": schema.ListAttribute{
+				MarkdownDescription: "List of events to listen for. See " +
+					"[the documentation](https://help.bluestonepim.com/webhook-event-types) for all available webhooks",
+				ElementType: types.StringType,
+				Optional:    true,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
 			},
 		},
 	}
@@ -67,21 +87,21 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 		return
 	}
 
-	r.client = data.PimClient
+	r.client = data.NotificationClient
 }
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan CategoryAttribute
+	var plan Webhook
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := AssignAttributeDefinition(ctx, r.client, &plan)
-	if diag != nil {
-		resp.Diagnostics.Append(diag)
+	result, diags := CreateWebhook(ctx, r.client, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -95,17 +115,16 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 // Read refreshes the Terraform state with the latest data.
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var current CategoryAttribute
+	var current Webhook
 	diags := req.State.Get(ctx, &current)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := GetCategoryAttributeByID(
-		ctx, r.client, current.CategoryId.ValueString(), current.AttributeDefinitionId.ValueString())
-	if diag != nil {
-		resp.Diagnostics.Append(diag)
+	result, diags := GetWebhookByID(ctx, r.client, current.ID.ValueString())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -120,7 +139,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
-	var plan CategoryAttribute
+	var plan Webhook
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -128,16 +147,16 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	// Retrieve values from state
-	var state CategoryAttribute
+	var state Webhook
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := UpdateAttributeDefinition(ctx, r.client, &state, &plan)
-	if diag != nil {
-		resp.Diagnostics.Append(diag)
+	result, diags := UpdateWebhookById(ctx, r.client, state.ID.ValueString(), &state, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -151,16 +170,16 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Retrieve values from state
-	var state CategoryAttribute
+	var state Webhook
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	diag := UnassignAttributeDefinition(ctx, r.client, state.CategoryId.ValueString(), state.AttributeDefinitionId.ValueString())
-	if diag != nil {
-		resp.Diagnostics.Append(diag)
+	diags = DeleteWebhookByID(ctx, r.client, state.ID.ValueString())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 }

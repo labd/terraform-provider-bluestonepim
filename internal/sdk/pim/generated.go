@@ -26262,6 +26262,7 @@ type ChangeStatusesByIdsResponse struct {
 	HTTPResponse *http.Response
 	JSON400      *ErrorResponse
 	JSON403      *UpdateProductStateResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -26402,6 +26403,7 @@ type UnarchiveProductsByIdsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON400      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -27671,6 +27673,7 @@ type ChangeStatusResponse struct {
 	HTTPResponse *http.Response
 	JSON400      *ErrorResponse
 	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -35014,6 +35017,13 @@ func ParseChangeStatusesByIdsResponse(rsp *http.Response) (*ChangeStatusesByIdsR
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -35225,6 +35235,13 @@ func ParseUnarchiveProductsByIdsResponse(rsp *http.Response) (*UnarchiveProducts
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -37068,6 +37085,13 @@ func ParseChangeStatusResponse(rsp *http.Response) (*ChangeStatusResponse, error
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 

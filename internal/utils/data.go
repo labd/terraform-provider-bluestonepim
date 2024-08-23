@@ -2,13 +2,15 @@ package utils
 
 import (
 	"fmt"
+	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/notifications"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/pim"
 )
 
 type ProviderData struct {
-	Client *pim.ClientWithResponses
+	PimClient          *pim.ClientWithResponses
+	NotificationClient *notifications.ClientWithResponses
 }
 
 func GetProviderData(data any) (*ProviderData, diag.Diagnostic) {

@@ -39,11 +39,11 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 // Schema defines the schema for the data source.
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "",
+		MarkdownDescription: "",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Platform-generated unique identifier of the Category.",
-				Computed:    true,
+				MarkdownDescription: "Platform-generated unique identifier of the Category.",
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -55,12 +55,12 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				Description: "The name of the Category.",
-				Optional:    true,
+				MarkdownDescription: "The name of the Category.",
+				Optional:            true,
 			},
 			"data_type": schema.StringAttribute{
-				Description: "The data type of the attribute.",
-				Required:    true,
+				MarkdownDescription: "The data type of the attribute.",
+				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("boolean", "integer", "decimal", "date", "text", "formatted_text"),
 				},
@@ -69,22 +69,22 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				},
 			},
 			"content_type": schema.StringAttribute{
-				Description: "The content type of the attribute.",
-				Optional:    true,
-				Computed:    true,
+				MarkdownDescription: "The content type of the attribute.",
+				Optional:            true,
+				Computed:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("text/markdown", "html"),
 				},
 				Default: stringdefault.StaticString("text/markdown"),
 			},
 			"description": schema.StringAttribute{
-				Description: "The description of the attribute.",
-				Optional:    true,
+				MarkdownDescription: "The description of the attribute.",
+				Optional:            true,
 			},
 			// TODO: Create a validator so that this field can only be set if the data_type is integer or decimal
 			"unit": schema.StringAttribute{
-				Description: "The unit of the attribute.",
-				Optional:    true,
+				MarkdownDescription: "The unit of the attribute.",
+				Optional:            true,
 			},
 		},
 	}
@@ -102,7 +102,7 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 		return
 	}
 
-	r.client = data.Client
+	r.client = data.PimClient
 }
 
 // Create creates the resource and sets the initial Terraform state.

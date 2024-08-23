@@ -2,15 +2,17 @@ package provider
 
 import (
 	"context"
-	"net/http"
-
-	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/webhook"
+	"github.com/labd/terraform-provider-bluestonepim/internal/sdk/notifications"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
+	"net/http"
 
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_definition"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category"
@@ -21,7 +23,6 @@ import (
 
 // Ensure BluestonePimProvider satisfies various provider interfaces.
 var _ provider.Provider = &BluestonePimProvider{}
-var _ provider.ProviderWithFunctions = &BluestonePimProvider{}
 
 // BluestonePimProvider defines the provider implementation.
 type BluestonePimProvider struct {
@@ -29,11 +30,15 @@ type BluestonePimProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
+	debug   bool
 }
 
 // BluestonePimProviderModel describes the provider data model.
 type BluestonePimProviderModel struct {
+	ClientID     types.String `tfsdk:"client_id"`
 	ClientSecret types.String `tfsdk:"client_secret"`
+	AuthURL      types.String `tfsdk:"auth_url"`
+	ApiURL       types.String `tfsdk:"api_url"`
 }
 
 func (p *BluestonePimProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -44,10 +49,22 @@ func (p *BluestonePimProvider) Metadata(ctx context.Context, req provider.Metada
 func (p *BluestonePimProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"client_secret": schema.StringAttribute{
+			"client_id": schema.StringAttribute{
+				MarkdownDescription: "The client id for Bluestone Platform API",
 				Optional:            true,
-				MarkdownDescription: "The client secret for Bluestone PIM Management API (MAPI)",
+			},
+			"client_secret": schema.StringAttribute{
+				MarkdownDescription: "The client secret for Bluestone Platform API",
+				Optional:            true,
 				Sensitive:           true,
+			},
+			"auth_url": schema.StringAttribute{
+				MarkdownDescription: "The authentication URL of the Bluestone Platform API",
+				Optional:            true,
+			},
+			"api_url": schema.StringAttribute{
+				MarkdownDescription: "The api URL of the Bluestone Platform API",
+				Optional:            true,
 			},
 		},
 	}
@@ -62,27 +79,79 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	var clientID = utils.Getenv("BP_CLIENT_ID", "")
+	var clientSecret = utils.Getenv("BP_CLIENT_SECRET", "")
+	var apiURL = utils.Getenv("BP_API_URL", "https://api.bluestonepim.com")
+	var authURL = utils.Getenv("BP_AUTH_URL", "https://idp.bluestonepim.com/op/token")
 
-	httpClient := &http.Client{
-		Transport: utils.DebugTransport,
+	if data.ClientID.ValueString() != "" {
+		clientID = data.ClientID.ValueString()
 	}
 
-	apiKeyProvider, apiKeyProviderErr := securityprovider.NewSecurityProviderApiKey("header", "api-key", data.ClientSecret.ValueString())
-	if apiKeyProviderErr != nil {
-		panic(apiKeyProviderErr)
+	if data.ClientSecret.ValueString() != "" {
+		clientSecret = data.ClientSecret.ValueString()
 	}
-	client, err := pim.NewClientWithResponses(
-		"https://mapi.test.bluestonepim.com/pim",
-		pim.WithRequestEditorFn(apiKeyProvider.Intercept),
-		pim.WithHTTPClient(httpClient))
+
+	if data.ClientSecret.ValueString() != "" {
+		apiURL = data.ApiURL.ValueString()
+	}
+
+	if data.AuthURL.ValueString() != "" {
+		authURL = data.AuthURL.ValueString()
+	}
+
+	if clientID == "" {
+		resp.Diagnostics.AddError(
+			"Missing Client ID Configuration",
+			"While configuring the provider, the API token was not found in "+
+				"the BP_CLIENT_ID environment variable or provider "+
+				"configuration block client_id attribute.",
+		)
+	}
+
+	if clientSecret == "" {
+		resp.Diagnostics.AddError(
+			"Missing Client Secret Configuration",
+			"While configuring the provider, the API token was not found in "+
+				"the BP_CLIENT_SECRET environment variable or provider "+
+				"configuration block client_secret attribute.",
+		)
+	}
+
+	oauth2Config := &clientcredentials.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		TokenURL:     authURL,
+	}
+
+	innerHttpClient := http.DefaultClient
+	if p.debug {
+		innerHttpClient.Transport = utils.DebugTransport
+	}
+
+	httpClient := oauth2Config.Client(
+		context.WithValue(context.Background(), oauth2.HTTPClient, innerHttpClient),
+	)
+
+	pimClient, err := pim.NewClientWithResponses(
+		fmt.Sprintf("%s/pim", apiURL),
+		pim.WithHTTPClient(httpClient),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	notificationsClient, err := notifications.NewClientWithResponses(
+		fmt.Sprintf("%s/notification-external", apiURL),
+		notifications.WithHTTPClient(httpClient),
+	)
 	if err != nil {
 		panic(err)
 	}
 
 	container := &utils.ProviderData{
-		Client: client,
+		PimClient:          pimClient,
+		NotificationClient: notificationsClient,
 	}
 
 	// Example client configuration for data sources and resources
@@ -95,6 +164,7 @@ func (p *BluestonePimProvider) Resources(ctx context.Context) []func() resource.
 		category.NewResource,
 		attribute_definition.NewResource,
 		category_attribute.NewResource,
+		webhook.NewResource,
 	}
 }
 
@@ -104,14 +174,11 @@ func (p *BluestonePimProvider) DataSources(ctx context.Context) []func() datasou
 	}
 }
 
-func (p *BluestonePimProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{}
-}
-
-func New(version string) func() provider.Provider {
+func New(version string, debug bool) func() provider.Provider {
 	return func() provider.Provider {
 		return &BluestonePimProvider{
 			version: version,
+			debug:   debug,
 		}
 	}
 }
