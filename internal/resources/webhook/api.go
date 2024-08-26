@@ -15,7 +15,7 @@ const ResourceIdHeader = "Resource-Id"
 
 func GetWebhookByID(
 	ctx context.Context,
-	client notification_external.ClientWithResponsesInterface,
+	client *notification_external.ClientWithResponses,
 	id string,
 ) (*Webhook, diag.Diagnostic) {
 	webhookRes, err := client.GetWithResponse(ctx, id)
@@ -53,10 +53,10 @@ func GetWebhookByID(
 
 func CreateWebhook(
 	ctx context.Context,
-	client notification_external.ClientWithResponsesInterface,
+	client *notification_external.ClientWithResponses,
 	current *Webhook,
 ) (*Webhook, diag.Diagnostic) {
-	webhookRes, err := client.CreateWithResponse(ctx, notification_external.CreateJSONRequestBody{
+	webhookRes, err := client.Create(ctx, notification_external.CreateJSONRequestBody{
 		Secret: current.Secret.ValueString(),
 		Url:    current.URL.ValueString(),
 		Active: current.Active.ValueBool(),
@@ -65,11 +65,11 @@ func CreateWebhook(
 		return nil, diag.NewErrorDiagnostic("Failed creating webhook", err.Error())
 	}
 
-	if d := utils.AssertStatusCode(webhookRes, http.StatusCreated); d != nil {
-		return nil, d
+	if webhookRes.StatusCode != http.StatusCreated {
+		return nil, diag.NewErrorDiagnostic("Failed creating webhook", fmt.Sprintf("Expected status code %d, got %d", http.StatusCreated, webhookRes.StatusCode))
 	}
 
-	id := webhookRes.HTTPResponse.Header.Get(ResourceIdHeader)
+	id := webhookRes.Header.Get(ResourceIdHeader)
 	if id == "" {
 		return nil, diag.NewErrorDiagnostic(
 			"Failed creating webhook",
@@ -96,13 +96,13 @@ func CreateWebhook(
 
 func UpdateWebhookById(
 	ctx context.Context,
-	client notification_external.ClientWithResponsesInterface,
+	client *notification_external.ClientWithResponses,
 	id string,
 	current *Webhook,
 	planned *Webhook,
 ) (*Webhook, diag.Diagnostic) {
 	if !(current.ID.Equal(planned.ID) && current.Secret.Equal(planned.Secret) && current.URL.Equal(planned.URL) && current.Active.Equal(planned.Active)) {
-		updateRes, err := client.UpdateWithResponse(ctx, id, notification_external.UpdateJSONRequestBody{
+		updateRes, err := client.Update(ctx, id, notification_external.UpdateJSONRequestBody{
 			Secret: planned.Secret.ValueStringPointer(),
 			Url:    planned.URL.ValueStringPointer(),
 			Active: planned.Active.ValueBoolPointer(),
@@ -110,8 +110,8 @@ func UpdateWebhookById(
 		if err != nil {
 			return nil, diag.NewErrorDiagnostic("Failed updating webhook", err.Error())
 		}
-		if d := utils.AssertStatusCode(updateRes, http.StatusNoContent); d != nil {
-			return nil, d
+		if updateRes.StatusCode != http.StatusOK {
+			return nil, diag.NewErrorDiagnostic("Failed updating webhook", fmt.Sprintf("Expected status code %d, got %d", http.StatusNoContent, updateRes.StatusCode))
 		}
 	}
 
@@ -170,15 +170,15 @@ func UpdateWebhookById(
 
 func DeleteWebhookByID(
 	ctx context.Context,
-	client notification_external.ClientWithResponsesInterface,
+	client *notification_external.ClientWithResponses,
 	id string,
 ) diag.Diagnostic {
-	res, err := client.DeleteWithResponse(ctx, id)
+	res, err := client.Delete(ctx, id)
 	if err != nil {
 		return diag.NewErrorDiagnostic("Failed deleting webhook", err.Error())
 	}
-	if d := utils.AssertStatusCode(res, http.StatusOK); d != nil {
-		return d
+	if res.StatusCode != http.StatusOK {
+		return diag.NewErrorDiagnostic("Failed deleting webhook", fmt.Sprintf("Expected status code %d, got %d", http.StatusOK, res.StatusCode))
 	}
 
 	return nil

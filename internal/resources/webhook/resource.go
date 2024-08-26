@@ -26,7 +26,7 @@ func NewResource() resource.Resource {
 }
 
 type Resource struct {
-	client notification_external.ClientWithResponsesInterface
+	client *notification_external.ClientWithResponses
 }
 
 // Metadata returns the data source type name.

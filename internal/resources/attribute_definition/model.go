@@ -13,44 +13,4 @@ type AttributeDefinition struct {
 	GroupID        types.String `tfsdk:"group_id"`
 	Internal       types.Bool   `tfsdk:"internal"`
 	Unit           types.String `tfsdk:"unit"`
-	Restrictions   Restrictions `tfsdk:"restrictions"`
-}
-
-type Restrictions struct {
-	types.Object
-
-	Column ColumnRestriction `tfsdk:"column"`
-	Enum   EnumRestriction   `tfsdk:"enum"`
-	Matrix types.Object      `tfsdk:"matrix"`
-	Range  types.Object      `tfsdk:"range"`
-	Text   types.Object      `tfsdk:"text"`
-}
-
-type ColumnRestriction struct {
-	types.Object
-
-	Columns types.List `tfsdk:"columns"`
-}
-
-type Column struct {
-	types.Object
-
-	ID    types.String `tfsdk:"id"`
-	Value types.String `tfsdk:"value"`
-}
-
-type EnumRestriction struct {
-	types.Object
-
-	Type   types.String `tfsdk:"type"`
-	Values types.List   `tfsdk:"values"`
-}
-
-type EnumValue struct {
-	types.Object
-
-	Metadata types.String `tfsdk:"metadata"`
-	Number   types.String `tfsdk:"number"`
-	Value    types.String `tfsdk:"value"`
-	ValueId  types.String `tfsdk:"valueId"`
 }

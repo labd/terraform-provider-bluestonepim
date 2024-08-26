@@ -10,11 +10,9 @@ import (
 	"net/http"
 )
 
-const ResourceIdHeader = "Resource-Id"
-
 func GetContextByID(
 	ctx context.Context,
-	client global_settings.ClientWithResponsesInterface,
+	client *global_settings.ClientWithResponses,
 	id string,
 ) (*Context, diag.Diagnostic) {
 	contextRes, err := client.GetWithResponse(ctx, id)
@@ -77,7 +75,7 @@ func CreateContext(
 
 func UpdateContextById(
 	ctx context.Context,
-	client global_settings.ClientWithResponsesInterface,
+	client *global_settings.ClientWithResponses,
 	id string,
 	current *Context,
 	planned *Context,
@@ -101,7 +99,7 @@ func UpdateContextById(
 
 func DeleteContextByID(
 	ctx context.Context,
-	client global_settings.ClientWithResponsesInterface,
+	client *global_settings.ClientWithResponses,
 	id string,
 ) diag.Diagnostic {
 	res, err := client.ArchiveWithResponse(ctx, id)
