@@ -17,4 +17,7 @@ description: |-
 
 ### Optional
 
-- `client_secret` (String, Sensitive) The client secret for Bluestone PIM Management API (MAPI)
+- `api_url` (String) The api URL of the Bluestone Platform API
+- `auth_url` (String) The authentication URL of the Bluestone Platform API
+- `client_id` (String) The client id for Bluestone Platform API
+- `client_secret` (String, Sensitive) The client secret for Bluestone Platform API

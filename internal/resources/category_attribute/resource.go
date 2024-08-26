@@ -24,7 +24,7 @@ func NewResource() resource.Resource {
 }
 
 type Resource struct {
-	client *pim.ClientWithResponses
+	client pim.ClientWithResponsesInterface
 }
 
 // Metadata returns the data source type name.

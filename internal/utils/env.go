@@ -2,7 +2,7 @@ package utils
 
 import "os"
 
-// Getenv retrieves the value of the environment variable named by the key.
+// GetEnv retrieves the value of the environment variable named by the key.
 // If the variable is not present in the environment, then the fallback value is returned.
 //
 // Parameters:
@@ -12,7 +12,7 @@ import "os"
 // Returns:
 //
 //	The value of the environment variable if it is set, otherwise the fallback value.
-func Getenv(key, fallback string) string {
+func GetEnv(key, fallback string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
 		return fallback

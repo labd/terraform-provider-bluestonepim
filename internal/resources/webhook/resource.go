@@ -26,7 +26,7 @@ func NewResource() resource.Resource {
 }
 
 type Resource struct {
-	client *notification_external.ClientWithResponses
+	client notification_external.ClientWithResponsesInterface
 }
 
 // Metadata returns the data source type name.
@@ -99,8 +99,8 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	result, diags := CreateWebhook(ctx, r.client, &plan)
-	resp.Diagnostics.Append(diags...)
+	result, diag := CreateWebhook(ctx, r.client, &plan)
+	resp.Diagnostics.Append(diag)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -122,8 +122,8 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	result, diags := GetWebhookByID(ctx, r.client, current.ID.ValueString())
-	resp.Diagnostics.Append(diags...)
+	result, diag := GetWebhookByID(ctx, r.client, current.ID.ValueString())
+	resp.Diagnostics.Append(diag)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -154,8 +154,8 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	result, diags := UpdateWebhookById(ctx, r.client, state.ID.ValueString(), &state, &plan)
-	resp.Diagnostics.Append(diags...)
+	result, diag := UpdateWebhookById(ctx, r.client, state.ID.ValueString(), &state, &plan)
+	resp.Diagnostics.Append(diag)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -177,8 +177,8 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	diags = DeleteWebhookByID(ctx, r.client, state.ID.ValueString())
-	resp.Diagnostics.Append(diags...)
+	diag := DeleteWebhookByID(ctx, r.client, state.ID.ValueString())
+	resp.Diagnostics.Append(diag)
 	if resp.Diagnostics.HasError() {
 		return
 	}

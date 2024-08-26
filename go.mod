@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/terraform-plugin-framework v1.10.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.13.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
-	github.com/labd/bluestonepim-go-sdk v0.0.0-20240823102937-6f8f1edbe1ef
+	github.com/labd/bluestonepim-go-sdk v0.0.0-20240823120912-51df98d9071c
 	golang.org/x/oauth2 v0.17.0
 )
 

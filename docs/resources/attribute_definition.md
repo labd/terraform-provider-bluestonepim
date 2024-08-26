@@ -31,8 +31,12 @@ resource "bluestonepim_attribute_definition" "my_attribute_definition" {
 
 ### Optional
 
+- `character_set` (String) The unit of the attribute.
 - `content_type` (String) The content type of the attribute.
 - `description` (String) The description of the attribute.
+- `external_source` (Boolean) Whether the attribute is an external source.
+- `group_id` (String) The group ID of the attribute.
+- `internal` (Boolean) Whether the attribute is internal.
 - `name` (String) The name of the Category.
 - `number` (String) Number
 - `unit` (String) The unit of the attribute.

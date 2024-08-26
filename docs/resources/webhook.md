@@ -17,7 +17,7 @@ resource "bluestonepim_webhook" "my_webhook" {
   url    = "https://example.test"
   secret = "my-secret"
   active = true
-  events = [
+  event_types = [
     "PRODUCT_CREATED",
     "PRODUCT_SYNC_DONE"
   ]
@@ -35,7 +35,7 @@ resource "bluestonepim_webhook" "my_webhook" {
 ### Optional
 
 - `active` (Boolean) Messages will not be posted to webhook if inactive.
-- `event_types` (List of String) List of events to listen for.
+- `event_types` (List of String) List of events to listen for. See [the documentation](https://help.bluestonepim.com/webhook-event-types) for all available webhooks
 
 ### Read-Only
 

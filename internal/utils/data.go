@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/labd/bluestonepim-go-sdk/global_settings"
 	"github.com/labd/bluestonepim-go-sdk/notification_external"
 	"github.com/labd/bluestonepim-go-sdk/pim"
 
@@ -9,8 +10,9 @@ import (
 )
 
 type ProviderData struct {
-	PimClient          *pim.ClientWithResponses
-	NotificationClient *notification_external.ClientWithResponses
+	PimClient            *pim.ClientWithResponses
+	NotificationClient   *notification_external.ClientWithResponses
+	GlobalSettingsClient *global_settings.ClientWithResponses
 }
 
 func GetProviderData(data any) (*ProviderData, diag.Diagnostic) {

@@ -1,19 +1,11 @@
-package attribute_definition
+package context
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/labd/bluestonepim-go-sdk/pim"
-
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-
+	"github.com/labd/bluestonepim-go-sdk/global_settings"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
@@ -29,81 +21,40 @@ func NewResource() resource.Resource {
 }
 
 type Resource struct {
-	client pim.ClientWithResponsesInterface
+	client *global_settings.ClientWithResponses
 }
 
 // Metadata returns the data source type name.
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_attribute_definition"
+	resp.TypeName = req.ProviderTypeName + "_context"
 }
 
 // Schema defines the schema for the data source.
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "",
+		MarkdownDescription: "Bluestone PIM allows you to communicate effectively with a global audience by " +
+			"providing product information in multiple languages and tailoring it to different linguistic " +
+			"audiences. The fallback feature ensures relevant information is displayed even if a specific " +
+			"translation is missing. The translation tabs offer a structured approach to translating specific aspects " +
+			"of your product information. The context feature allows you to customize your product information based " +
+			"on specific channels or segments, ensuring impactful product descriptions. Overall, these features " +
+			"provide flexibility and control to effectively manage and communicate your product information.. See " +
+			"[the documentation](https://help.bluestonepim.com/languages-and-context) for more information.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Platform-generated unique identifier of the Category.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"number": schema.StringAttribute{
-				MarkdownDescription: "Number",
-				Optional:            true,
+				MarkdownDescription: "Context identifier",
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name of the Category.",
-				Optional:            true,
-			},
-			"description": schema.StringAttribute{
-				MarkdownDescription: "The description of the attribute.",
-				Optional:            true,
-			},
-
-			"data_type": schema.StringAttribute{
-				MarkdownDescription: "The data type of the attribute.",
+				MarkdownDescription: "The name of the context.",
 				Required:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf("boolean", "integer", "decimal", "date", "time", "date_time", "location", "single_select", "multi_select", "text", "formatted_text", "pattern", "multiline", "column", "matrix", "dictionary"),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
-			"content_type": schema.StringAttribute{
-				MarkdownDescription: "The content type of the attribute.",
-				Optional:            true,
-				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf("text/markdown", "html"),
-				},
-				Default: stringdefault.StaticString("text/markdown"),
+			"locale": schema.StringAttribute{
+				MarkdownDescription: "The locale of the context.",
+				Required:            true,
 			},
-			"character_set": schema.StringAttribute{
-				MarkdownDescription: "The unit of the attribute.",
-				Optional:            true,
-			},
-			"external_source": schema.BoolAttribute{
-				MarkdownDescription: "Whether the attribute is an external source.",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-			},
-			"internal": schema.BoolAttribute{
-				MarkdownDescription: "Whether the attribute is internal.",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-			},
-			"group_id": schema.StringAttribute{
-				MarkdownDescription: "The group ID of the attribute.",
-				Optional:            true,
-			},
-			"unit": schema.StringAttribute{
-				MarkdownDescription: "The unit of the attribute.",
+			"fallback_id": schema.StringAttribute{
+				MarkdownDescription: "The fallback of the context.",
 				Optional:            true,
 			},
 		},
@@ -122,21 +73,21 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 		return
 	}
 
-	r.client = data.PimClient
+	r.client = data.GlobalSettingsClient
 }
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan AttributeDefinition
+	var plan Context
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := CreateAttributeDefinition(ctx, r.client, &plan)
-	if diag != nil {
-		resp.Diagnostics.Append(diag)
+	result, diag := CreateContext(ctx, r.client, &plan)
+	resp.Diagnostics.Append(diag)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -150,16 +101,16 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 // Read refreshes the Terraform state with the latest data.
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var current AttributeDefinition
+	var current Context
 	diags := req.State.Get(ctx, &current)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := GetAttributeDefinitionByID(ctx, r.client, current.Id.ValueString())
-	if diag != nil {
-		resp.Diagnostics.Append(diag)
+	result, diag := GetContextByID(ctx, r.client, current.ID.ValueString())
+	resp.Diagnostics.Append(diag)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -174,7 +125,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
-	var plan AttributeDefinition
+	var plan Context
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -182,16 +133,16 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	// Retrieve values from state
-	var state AttributeDefinition
+	var state Context
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := UpdateAttributeDefinition(ctx, r.client, &state, &plan)
-	if diag != nil {
-		resp.Diagnostics.Append(diag)
+	result, diag := UpdateContextById(ctx, r.client, state.ID.ValueString(), &state, &plan)
+	resp.Diagnostics.Append(diag)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -205,16 +156,16 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Retrieve values from state
-	var state AttributeDefinition
+	var state Context
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	diag := DeleteAttributeDefinition(ctx, r.client, state.Id.ValueString())
-	if diag != nil {
-		resp.Diagnostics.Append(diag)
+	diag := DeleteContextByID(ctx, r.client, state.ID.ValueString())
+	resp.Diagnostics.Append(diag)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 }

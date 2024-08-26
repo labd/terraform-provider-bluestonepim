@@ -19,7 +19,7 @@ func NewDataSource() datasource.DataSource {
 
 // DataSource defines the data source implementation.
 type DataSource struct {
-	client *pim.ClientWithResponses
+	client pim.ClientWithResponsesInterface
 }
 
 func (d *DataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -73,7 +73,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 
-	resource, diag := GetCategoryByID(ctx, d.client, data.Id.ValueString())
+	resource, diag := GetCategoryByID(ctx, d.client, data.Id.ValueString(), data.ContextId.ValueStringPointer())
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return

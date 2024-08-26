@@ -12,8 +12,7 @@ import (
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
-func GetAttributeDefinitionByID(ctx context.Context, client *pim.ClientWithResponses, id string) (*AttributeDefinition, diag.Diagnostic) {
-	// TODO: Retry on 409
+func GetAttributeDefinitionByID(ctx context.Context, client pim.ClientWithResponsesInterface, id string) (*AttributeDefinition, diag.Diagnostic) {
 	response, err := client.FindFilteredAttributeDefinitionsWithResponse(ctx, nil, pim.FindFilteredAttributeDefinitionsJSONRequestBody{
 		Filters: utils.Ref([]pim.AttributeDefinitionFilterDto{
 			{
@@ -44,20 +43,19 @@ func GetAttributeDefinitionByID(ctx context.Context, client *pim.ClientWithRespo
 	resource := resources[0]
 
 	result := &AttributeDefinition{
-		Id:          utils.NewStringValue(resource.Id),
+		Id:          types.StringPointerValue(resource.Id),
 		Name:        types.StringValue(resource.Name),
-		Number:      utils.NewStringValue(resource.Number),
+		Number:      types.StringPointerValue(resource.Number),
 		DataType:    types.StringValue(string(*resource.DataType)),
-		ContentType: utils.NewStringValue(resource.ContentType),
-		Unit:        utils.NewStringValue(resource.Unit),
+		ContentType: types.StringPointerValue(resource.ContentType),
+		Unit:        types.StringPointerValue(resource.Unit),
 	}
 	return result, nil
 }
 
-func UpdateAttributeDefinition(ctx context.Context, client *pim.ClientWithResponses, current *AttributeDefinition, resource *AttributeDefinition) (*AttributeDefinition, diag.Diagnostic) {
-	if (resource.Name.ValueString() != current.Name.ValueString()) ||
-		(resource.Number.ValueString() != current.Number.ValueString()) {
-		client.UpdateMetadataWithResponse(ctx, current.Id.ValueString(),
+func UpdateAttributeDefinition(ctx context.Context, client pim.ClientWithResponsesInterface, current *AttributeDefinition, resource *AttributeDefinition) (*AttributeDefinition, diag.Diagnostic) {
+	if !(resource.Name.Equal(current.Name) && resource.Number.Equal(current.Number)) {
+		res, err := client.UpdateMetadataWithResponse(ctx, current.Id.ValueString(),
 			&pim.UpdateMetadataParams{},
 			pim.UpdateMetadataJSONRequestBody{
 				Name: &pim.PropertyUpdateString{
@@ -67,22 +65,35 @@ func UpdateAttributeDefinition(ctx context.Context, client *pim.ClientWithRespon
 					Value: resource.Number.ValueStringPointer(),
 				},
 			})
+
+		if err != nil {
+			return nil, diag.NewErrorDiagnostic("Unable to update attribute definition", err.Error())
+		}
+
+		if d := utils.AssertStatusCode(res, http.StatusNoContent); d != nil {
+			return nil, d
+		}
 	}
 
 	return GetAttributeDefinitionByID(ctx, client, current.Id.ValueString())
 }
 
-func CreateAttributeDefinition(ctx context.Context, client *pim.ClientWithResponses, resource *AttributeDefinition) (*AttributeDefinition, diag.Diagnostic) {
+func CreateAttributeDefinition(ctx context.Context, client pim.ClientWithResponsesInterface, resource *AttributeDefinition) (*AttributeDefinition, diag.Diagnostic) {
 	response, err := client.CreateAttributeDefinitionWithResponse(ctx,
 		&pim.CreateAttributeDefinitionParams{
 			Validation: utils.Ref[pim.CreateAttributeDefinitionParamsValidation]("NAME"),
 		},
 		pim.CreateAttributeDefinitionJSONRequestBody{
-			Name:        resource.Name.ValueString(),
-			Number:      utils.OptionalValueString(resource.Number),
-			DataType:    utils.Ref(pim.SimpleAttributeDefinitionRequestDataType(resource.DataType.ValueString())),
-			ContentType: resource.ContentType.ValueStringPointer(),
-			Unit:        utils.OptionalValueString(resource.Unit),
+			Charset:        resource.CharacterSet.ValueStringPointer(),
+			ContentType:    resource.ContentType.ValueStringPointer(),
+			DataType:       utils.Ref(pim.SimpleAttributeDefinitionRequestDataType(resource.DataType.ValueString())),
+			ExternalSource: resource.ExternalSource.ValueBoolPointer(),
+			GroupId:        resource.GroupID.ValueStringPointer(),
+			Name:           resource.Name.ValueString(),
+			Number:         resource.Number.ValueStringPointer(),
+			//TODO: set restrictions
+			Restrictions: nil,
+			Unit:         resource.Unit.ValueStringPointer(),
 		},
 	)
 
@@ -99,7 +110,7 @@ func CreateAttributeDefinition(ctx context.Context, client *pim.ClientWithRespon
 	return GetAttributeDefinitionByID(ctx, client, resourceId)
 }
 
-func DeleteAttributeDefinition(ctx context.Context, client *pim.ClientWithResponses, id string) diag.Diagnostic {
+func DeleteAttributeDefinition(ctx context.Context, client pim.ClientWithResponsesInterface, id string) diag.Diagnostic {
 	response, err := client.DeleteAttributeDefinitionWithResponse(ctx, id)
 	if err != nil {
 		return diag.NewErrorDiagnostic("Unable to delete attribute definition", err.Error())

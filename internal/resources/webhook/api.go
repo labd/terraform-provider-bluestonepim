@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/labd/bluestonepim-go-sdk/notification_external"
+	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
+	"net/http"
 	"slices"
 )
 
@@ -13,39 +15,29 @@ const ResourceIdHeader = "Resource-Id"
 
 func GetWebhookByID(
 	ctx context.Context,
-	client *notification_external.ClientWithResponses,
+	client notification_external.ClientWithResponsesInterface,
 	id string,
-) (*Webhook, diag.Diagnostics) {
-	diags := diag.Diagnostics{}
+) (*Webhook, diag.Diagnostic) {
 	webhookRes, err := client.GetWithResponse(ctx, id)
 	if err != nil {
-		diags.AddError("Failed fetching webhook", err.Error())
-		return nil, diags
+		return nil, diag.NewErrorDiagnostic("Failed fetching webhook", err.Error())
 	}
-	if webhookRes.StatusCode() != 200 {
-		diags.AddError(
-			"Failed fetching webhook",
-			fmt.Sprintf("unexpected status code %d", webhookRes.StatusCode()),
-		)
-		return nil, diags
+	if d := utils.AssertStatusCode(webhookRes, http.StatusOK); d != nil {
+		return nil, d
 	}
 
 	subscriptionRes, err := client.FindWebhookWithResponse(ctx, id)
 	if err != nil {
-		diags.AddError("Failed fetching webhook subscriptions", err.Error())
-		return nil, diags
+		return nil, diag.NewErrorDiagnostic("Failed fetching webhook subscriptions", err.Error())
 	}
-	if subscriptionRes.StatusCode() != 200 {
-		diags.AddError(
-			"Failed fetching webhook subscriptions",
-			fmt.Sprintf("unexpected status code %d", subscriptionRes.StatusCode()),
-		)
-		return nil, diags
+	if d := utils.AssertStatusCode(subscriptionRes, http.StatusOK); d != nil {
+		return nil, d
 	}
 
 	eventTypes, diags := types.ListValueFrom(ctx, types.StringType, subscriptionRes.JSON200.EventTypes)
 	if diags.HasError() {
-		return nil, diags
+		//Return the first error, but there might be more
+		return nil, diags.Errors()[0]
 	}
 
 	webhook := &Webhook{
@@ -61,51 +53,42 @@ func GetWebhookByID(
 
 func CreateWebhook(
 	ctx context.Context,
-	client *notification_external.ClientWithResponses,
+	client notification_external.ClientWithResponsesInterface,
 	current *Webhook,
-) (*Webhook, diag.Diagnostics) {
-	diags := diag.Diagnostics{}
-	webhookRes, err := client.Create(ctx, notification_external.CreateJSONRequestBody{
+) (*Webhook, diag.Diagnostic) {
+	webhookRes, err := client.CreateWithResponse(ctx, notification_external.CreateJSONRequestBody{
 		Secret: current.Secret.ValueString(),
 		Url:    current.URL.ValueString(),
 		Active: current.Active.ValueBool(),
 	})
 	if err != nil {
-		diags.AddError("Failed creating webhook", err.Error())
-		return nil, diags
+		return nil, diag.NewErrorDiagnostic("Failed creating webhook", err.Error())
 	}
 
-	if webhookRes.StatusCode != 201 {
-		diags.AddError("Failed creating webhook", fmt.Sprintf("unexpected status code %d", webhookRes.StatusCode))
-		return nil, diags
+	if d := utils.AssertStatusCode(webhookRes, http.StatusCreated); d != nil {
+		return nil, d
 	}
 
-	id := webhookRes.Header.Get(ResourceIdHeader)
+	id := webhookRes.HTTPResponse.Header.Get(ResourceIdHeader)
 	if id == "" {
-		diags.AddError(
+		return nil, diag.NewErrorDiagnostic(
 			"Failed creating webhook",
 			fmt.Sprintf("missing resource id. Expected header '%s' to be set", ResourceIdHeader),
 		)
-		return nil, diags
 	}
 
 	var eventTypes []notification_external.WebhookEventTypeListRequestEventTypes
-	diags = current.EventTypes.ElementsAs(ctx, &eventTypes, false)
+	diags := current.EventTypes.ElementsAs(ctx, &eventTypes, false)
 	if diags.HasError() {
-		return nil, diags
+		return nil, diags.Errors()[0]
 	}
 
-	subscriptionRes, err := client.Subscribe(ctx, id, notification_external.SubscribeJSONRequestBody{EventTypes: eventTypes})
+	subscriptionRes, err := client.SubscribeWithResponse(ctx, id, notification_external.SubscribeJSONRequestBody{EventTypes: eventTypes})
 	if err != nil {
-		diags.AddError("Failed adding subscriptions to webhook", err.Error())
-		return nil, diags
+		return nil, diag.NewErrorDiagnostic("Failed adding subscriptions to webhook", err.Error())
 	}
-	if subscriptionRes.StatusCode != 200 {
-		diags.AddError(
-			"Failed adding subscriptions to webhook",
-			fmt.Sprintf("unexpected status code %d", subscriptionRes.StatusCode),
-		)
-		return nil, diags
+	if d := utils.AssertStatusCode(subscriptionRes, http.StatusOK); d != nil {
+		return nil, d
 	}
 
 	return GetWebhookByID(ctx, client, id)
@@ -113,42 +96,36 @@ func CreateWebhook(
 
 func UpdateWebhookById(
 	ctx context.Context,
-	client *notification_external.ClientWithResponses,
+	client notification_external.ClientWithResponsesInterface,
 	id string,
 	current *Webhook,
 	planned *Webhook,
-) (*Webhook, diag.Diagnostics) {
-	diags := diag.Diagnostics{}
+) (*Webhook, diag.Diagnostic) {
 	if !(current.ID.Equal(planned.ID) && current.Secret.Equal(planned.Secret) && current.URL.Equal(planned.URL) && current.Active.Equal(planned.Active)) {
-		updateRes, err := client.Update(ctx, id, notification_external.UpdateJSONRequestBody{
+		updateRes, err := client.UpdateWithResponse(ctx, id, notification_external.UpdateJSONRequestBody{
 			Secret: planned.Secret.ValueStringPointer(),
 			Url:    planned.URL.ValueStringPointer(),
 			Active: planned.Active.ValueBoolPointer(),
 		})
 		if err != nil {
-			diags.AddError("Failed updating webhook", err.Error())
-			return nil, diags
+			return nil, diag.NewErrorDiagnostic("Failed updating webhook", err.Error())
 		}
-		if updateRes.StatusCode != 200 {
-			diags.AddError(
-				"Failed updating webhook",
-				fmt.Sprintf("unexpected status code %d", updateRes.StatusCode),
-			)
-			return nil, diags
+		if d := utils.AssertStatusCode(updateRes, http.StatusNoContent); d != nil {
+			return nil, d
 		}
 	}
 
 	if !current.EventTypes.Equal(planned.EventTypes) {
 		var currentEventTypes []notification_external.WebhookEventTypeListRequestEventTypes
-		diags = current.EventTypes.ElementsAs(ctx, &currentEventTypes, false)
+		diags := current.EventTypes.ElementsAs(ctx, &currentEventTypes, false)
 		if diags.HasError() {
-			return nil, diags
+			return nil, diags.Errors()[0]
 		}
 
 		var plannedEventTypes []notification_external.WebhookEventTypeListRequestEventTypes
 		diags = planned.EventTypes.ElementsAs(ctx, &plannedEventTypes, false)
 		if diags.HasError() {
-			return nil, diags
+			return nil, diags.Errors()[0]
 		}
 
 		var unsubscribeEventTypes []notification_external.WebhookEventTypeListRequestEventTypes
@@ -161,19 +138,10 @@ func UpdateWebhookById(
 		if len(unsubscribeEventTypes) > 0 {
 			res, err := client.UnsubscribeWithResponse(ctx, id, notification_external.UnsubscribeJSONRequestBody{EventTypes: unsubscribeEventTypes})
 			if err != nil {
-				diags.AddError("Failed removing subscriptions from webhook", err.Error())
-				return nil, diags
+				return nil, diag.NewErrorDiagnostic("Failed removing subscriptions from webhook", err.Error())
 			}
-			if res.StatusCode() == 400 {
-				diags.AddError("Failed removing subscriptions from webhook", *res.JSON400.Error)
-				return nil, diags
-			}
-			if res.StatusCode() != 200 {
-				diags.AddError(
-					"Failed removing subscriptions from webhook",
-					fmt.Sprintf("unexpected status code %d", res.StatusCode()),
-				)
-				return nil, diags
+			if d := utils.AssertStatusCode(res, http.StatusOK); d != nil {
+				return nil, d
 			}
 		}
 
@@ -188,19 +156,10 @@ func UpdateWebhookById(
 		if len(subscribeEventTypes) > 0 {
 			res, err := client.SubscribeWithResponse(ctx, id, notification_external.SubscribeJSONRequestBody{EventTypes: subscribeEventTypes})
 			if err != nil {
-				diags.AddError("Failed adding subscriptions to webhook", err.Error())
-				return nil, diags
+				return nil, diag.NewErrorDiagnostic("Failed adding subscriptions to webhook", err.Error())
 			}
-			if res.StatusCode() == 400 {
-				diags.AddError("Failed adding subscriptions to webhook", *res.JSON400.Error)
-				return nil, diags
-			}
-			if res.StatusCode() != 200 {
-				diags.AddError(
-					"Failed adding subscriptions to webhook",
-					fmt.Sprintf("unexpected status code %d", res.StatusCode()),
-				)
-				return nil, diags
+			if d := utils.AssertStatusCode(res, http.StatusOK); d != nil {
+				return nil, d
 			}
 		}
 
@@ -211,22 +170,16 @@ func UpdateWebhookById(
 
 func DeleteWebhookByID(
 	ctx context.Context,
-	client *notification_external.ClientWithResponses,
+	client notification_external.ClientWithResponsesInterface,
 	id string,
-) diag.Diagnostics {
-	diags := diag.Diagnostics{}
-	res, err := client.Delete(ctx, id)
+) diag.Diagnostic {
+	res, err := client.DeleteWithResponse(ctx, id)
 	if err != nil {
-		diags.AddError("Failed deleting webhook", err.Error())
-		return diags
+		return diag.NewErrorDiagnostic("Failed deleting webhook", err.Error())
 	}
-	if res.StatusCode != 200 {
-		diags.AddError(
-			"Failed deleting webhook",
-			fmt.Sprintf("unexpected status code %d", res.StatusCode),
-		)
-		return diags
+	if d := utils.AssertStatusCode(res, http.StatusOK); d != nil {
+		return d
 	}
 
-	return diags
+	return nil
 }

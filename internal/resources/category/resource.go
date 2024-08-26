@@ -2,6 +2,9 @@ package category
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/labd/bluestonepim-go-sdk/pim"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -25,7 +28,7 @@ func NewResource() resource.Resource {
 }
 
 type Resource struct {
-	client *pim.ClientWithResponses
+	client pim.ClientWithResponsesInterface
 }
 
 // Metadata returns the data source type name.
@@ -48,9 +51,24 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"number": schema.StringAttribute{
 				MarkdownDescription: "Number",
 				Computed:            true,
+				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(0, 100),
+				},
+			},
+			"context_id": schema.StringAttribute{
+				MarkdownDescription: "Context of presented entity.",
+				Computed:            true,
+				Optional:            true,
+				//en is the default context
+				Default: stringdefault.StaticString("en"),
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the Category.",
+				Required:            true,
+			},
+			"description": schema.StringAttribute{
+				MarkdownDescription: "The description of the Category.",
 				Optional:            true,
 			},
 			"parent_id": schema.StringAttribute{
@@ -78,14 +96,14 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var resource Category
-	diags := req.Plan.Get(ctx, &resource)
+	var plan Category
+	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := CreateCategory(ctx, r.client, &resource)
+	result, diag := CreateCategory(ctx, r.client, &plan)
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
@@ -108,7 +126,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	result, diag := GetCategoryByID(ctx, r.client, current.Id.ValueString())
+	result, diag := GetCategoryByID(ctx, r.client, current.Id.ValueString(), current.ContextId.ValueStringPointer())
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return

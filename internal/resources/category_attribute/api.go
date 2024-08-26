@@ -13,7 +13,7 @@ import (
 
 func GetCategoryAttributeByID(
 	ctx context.Context,
-	client *pim.ClientWithResponses,
+	client pim.ClientWithResponsesInterface,
 	categoryId, attributeId string,
 ) (*CategoryAttribute, diag.Diagnostic) {
 	response, err := client.ListAttributesAttachedToGivenNodeWithResponse(
@@ -62,7 +62,7 @@ func GetCategoryAttributeByID(
 
 func UpdateAttributeDefinition(
 	ctx context.Context,
-	client *pim.ClientWithResponses,
+	client pim.ClientWithResponsesInterface,
 	current *CategoryAttribute,
 	resource *CategoryAttribute,
 ) (*CategoryAttribute, diag.Diagnostic) {
@@ -91,7 +91,7 @@ func UpdateAttributeDefinition(
 
 func AssignAttributeDefinition(
 	ctx context.Context,
-	client *pim.ClientWithResponses,
+	client pim.ClientWithResponsesInterface,
 	resource *CategoryAttribute,
 ) (*CategoryAttribute, diag.Diagnostic) {
 
@@ -125,7 +125,7 @@ func AssignAttributeDefinition(
 
 func UnassignAttributeDefinition(
 	ctx context.Context,
-	client *pim.ClientWithResponses,
+	client pim.ClientWithResponsesInterface,
 	categoryId, attributeId string,
 ) diag.Diagnostic {
 	response, err := client.DeleteAttributeFromNodeWithResponse(ctx, categoryId, attributeId)

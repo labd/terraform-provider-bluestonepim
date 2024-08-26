@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/labd/bluestonepim-go-sdk/global_settings"
 	"github.com/labd/bluestonepim-go-sdk/notification_external"
 	"github.com/labd/bluestonepim-go-sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/webhook"
@@ -18,6 +19,7 @@ import (
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_definition"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_attribute"
+	bpcontext "github.com/labd/terraform-provider-bluestonepim/internal/resources/context"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
@@ -79,10 +81,10 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 		return
 	}
 
-	var clientID = utils.Getenv("BP_CLIENT_ID", "")
-	var clientSecret = utils.Getenv("BP_CLIENT_SECRET", "")
-	var apiURL = utils.Getenv("BP_API_URL", "https://api.bluestonepim.com")
-	var authURL = utils.Getenv("BP_AUTH_URL", "https://idp.bluestonepim.com/op/token")
+	var clientID = utils.GetEnv("BP_CLIENT_ID", "")
+	var clientSecret = utils.GetEnv("BP_CLIENT_SECRET", "")
+	var apiURL = utils.GetEnv("BP_API_URL", "https://api.bluestonepim.com")
+	var authURL = utils.GetEnv("BP_AUTH_URL", "https://idp.bluestonepim.com/op/token")
 
 	if data.ClientID.ValueString() != "" {
 		clientID = data.ClientID.ValueString()
@@ -149,9 +151,18 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 		panic(err)
 	}
 
+	globalSettingsClient, err := global_settings.NewClientWithResponses(
+		fmt.Sprintf("%s/global-settings", apiURL),
+		global_settings.WithHTTPClient(httpClient),
+	)
+	if err != nil {
+		panic(err)
+	}
+
 	container := &utils.ProviderData{
-		PimClient:          pimClient,
-		NotificationClient: notificationsClient,
+		PimClient:            pimClient,
+		NotificationClient:   notificationsClient,
+		GlobalSettingsClient: globalSettingsClient,
 	}
 
 	// Example client configuration for data sources and resources
@@ -165,6 +176,7 @@ func (p *BluestonePimProvider) Resources(ctx context.Context) []func() resource.
 		attribute_definition.NewResource,
 		category_attribute.NewResource,
 		webhook.NewResource,
+		bpcontext.NewResource,
 	}
 }
 
