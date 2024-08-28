@@ -129,7 +129,7 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 	}
 
 	httpClient := oauth2Config.Client(
-		context.WithValue(context.Background(), oauth2.HTTPClient, retryableClient),
+		context.WithValue(context.Background(), oauth2.HTTPClient, retryableClient.StandardClient()),
 	)
 
 	pimClient, err := pim.NewClientWithResponses(
