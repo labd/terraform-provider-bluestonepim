@@ -64,10 +64,15 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 
 			"data_type": schema.StringAttribute{
-				MarkdownDescription: "The data type of the attribute.",
-				Required:            true,
+				MarkdownDescription: "The data type of the attribute. For the `matrix`, `dictionary`, and `column` " +
+					"data types use the dedicated resources",
+				Required: true,
 				Validators: []validator.String{
-					stringvalidator.OneOf("boolean", "integer", "decimal", "date", "time", "date_time", "location", "single_select", "multi_select", "text", "formatted_text", "pattern", "multiline", "column", "matrix", "dictionary"),
+					stringvalidator.OneOf(
+						"boolean", "integer", "decimal", "date", "time",
+						"date_time", "location", "single_select", "multi_select",
+						"text", "formatted_text", "pattern", "multiline",
+					),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -105,6 +110,83 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"unit": schema.StringAttribute{
 				MarkdownDescription: "The unit of the attribute.",
 				Optional:            true,
+			},
+			"restrictions": schema.SingleNestedAttribute{
+				MarkdownDescription: "The restrictions of the attribute.",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"enum": schema.SingleNestedAttribute{
+						Optional: true,
+						Attributes: map[string]schema.Attribute{
+							"type": schema.StringAttribute{
+								MarkdownDescription: "The type of the enum.",
+								Optional:            true,
+								Computed:            true,
+								Default:             stringdefault.StaticString("text"),
+								Validators: []validator.String{
+									stringvalidator.OneOf("text", "color"),
+								},
+							},
+							"values": schema.ListNestedAttribute{
+								Optional: true,
+								NestedObject: schema.NestedAttributeObject{
+									Attributes: map[string]schema.Attribute{
+										"metadata": schema.StringAttribute{
+											MarkdownDescription: "The metadata of the enum.",
+											Optional:            true,
+										},
+										"number": schema.StringAttribute{
+											MarkdownDescription: "The number of the enum.",
+											Optional:            true,
+										},
+										"value": schema.StringAttribute{
+											MarkdownDescription: "The value of the enum.",
+											Required:            true,
+										},
+										"value_id": schema.StringAttribute{
+											MarkdownDescription: "The ID of the value.",
+											Computed:            true,
+										},
+									},
+								},
+							},
+						},
+					},
+					"range": schema.SingleNestedAttribute{
+						Optional: true,
+						Attributes: map[string]schema.Attribute{
+							"max": schema.StringAttribute{
+								MarkdownDescription: "The maximum value of the range.",
+								Optional:            true,
+							},
+							"min": schema.StringAttribute{
+								MarkdownDescription: "The minimum value of the range.",
+								Optional:            true,
+							},
+							"step": schema.StringAttribute{
+								MarkdownDescription: "The step value of the range.",
+								Optional:            true,
+							},
+						},
+					},
+					"text": schema.SingleNestedAttribute{
+						Optional: true,
+						Attributes: map[string]schema.Attribute{
+							"max_length": schema.Int32Attribute{
+								MarkdownDescription: "The maximum length of the text.",
+								Optional:            true,
+							},
+							"pattern": schema.StringAttribute{
+								MarkdownDescription: "The pattern of the text.",
+								Optional:            true,
+							},
+							"whitespaces": schema.BoolAttribute{
+								MarkdownDescription: "Whether the text allows whitespaces.",
+								Optional:            true,
+							},
+						},
+					},
+				},
 			},
 		},
 	}

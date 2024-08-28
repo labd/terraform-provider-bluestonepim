@@ -11,10 +11,8 @@ import (
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
-func GetCategoryByID(ctx context.Context, client pim.ClientWithResponsesInterface, id string, context *string) (*Category, diag.Diagnostic) {
-	resp, err := client.GetNodeWithResponse(ctx, id, &pim.GetNodeParams{
-		Context: context,
-	})
+func GetCategoryByID(ctx context.Context, client pim.ClientWithResponsesInterface, id string) (*Category, diag.Diagnostic) {
+	resp, err := client.GetNodeWithResponse(ctx, id, nil)
 
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Unable to read data", err.Error())
@@ -30,17 +28,13 @@ func GetCategoryByID(ctx context.Context, client pim.ClientWithResponsesInterfac
 		Number:      types.StringPointerValue(resp.JSON200.Number),
 		ParentId:    types.StringPointerValue(resp.JSON200.ParentId),
 		Description: types.StringPointerValue(resp.JSON200.Description),
-		ContextId:   types.StringPointerValue(context),
 	}
 	return resource, nil
 }
 
 func UpdateCategory(ctx context.Context, client pim.ClientWithResponsesInterface, current *Category, planned *Category) (*Category, diag.Diagnostic) {
 	if !(planned.Name.Equal(current.Name) && planned.Number.Equal(current.Number) && planned.Description.Equal(current.Description)) {
-		response, err := client.UpdateCatalogNodeWithResponse(ctx, planned.Id.ValueString(),
-			&pim.UpdateCatalogNodeParams{
-				Context: planned.ContextId.ValueStringPointer(),
-			},
+		response, err := client.UpdateCatalogNodeWithResponse(ctx, planned.Id.ValueString(), nil,
 			pim.UpdateCatalogNodeJSONRequestBody{
 				Name:        planned.Name.ValueString(),
 				Number:      planned.Number.ValueStringPointer(),
@@ -70,14 +64,13 @@ func UpdateCategory(ctx context.Context, client pim.ClientWithResponsesInterface
 		}
 	}
 
-	return GetCategoryByID(ctx, client, current.Id.ValueString(), current.ContextId.ValueStringPointer())
+	return GetCategoryByID(ctx, client, current.Id.ValueString())
 }
 
 func CreateCategory(ctx context.Context, client pim.ClientWithResponsesInterface, resource *Category) (*Category, diag.Diagnostic) {
 	res, err := client.CreateCategoryWithResponse(ctx,
 		&pim.CreateCategoryParams{
 			Validation: "NAME",
-			Context:    resource.ContextId.ValueStringPointer(),
 		},
 		pim.CreateCategoryJSONRequestBody{
 			Name:     resource.Name.ValueString(),
@@ -98,9 +91,7 @@ func CreateCategory(ctx context.Context, client pim.ClientWithResponsesInterface
 	resourceId := res.HTTPResponse.Header.Get("Resource-Id")
 
 	//Workaround because we cannot set description on create
-	resU, err := client.UpdateCatalogNodeWithResponse(ctx, resourceId, &pim.UpdateCatalogNodeParams{
-		Context: resource.ContextId.ValueStringPointer(),
-	}, pim.UpdateCatalogNodeJSONRequestBody{
+	resU, err := client.UpdateCatalogNodeWithResponse(ctx, resourceId, nil, pim.UpdateCatalogNodeJSONRequestBody{
 		Name:        resource.Name.ValueString(),
 		Number:      resource.Number.ValueStringPointer(),
 		Description: resource.Description.ValueStringPointer(),
@@ -113,7 +104,7 @@ func CreateCategory(ctx context.Context, client pim.ClientWithResponsesInterface
 		return nil, d
 	}
 
-	return GetCategoryByID(ctx, client, resourceId, resource.ContextId.ValueStringPointer())
+	return GetCategoryByID(ctx, client, resourceId)
 }
 
 func DeleteCategory(ctx context.Context, client pim.ClientWithResponsesInterface, resource *Category) diag.Diagnostic {

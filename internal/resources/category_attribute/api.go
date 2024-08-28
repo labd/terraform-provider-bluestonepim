@@ -101,7 +101,9 @@ func AssignAttributeDefinition(
 		&pim.CreateCatalogNodeAttributeParams{
 			ForceCla: utils.Ref(true),
 		},
-		pim.CreateCatalogNodeAttributeJSONRequestBody{},
+		pim.CreateCatalogNodeAttributeJSONRequestBody{
+			Value: utils.Ref(""),
+		},
 	)
 
 	if err != nil {

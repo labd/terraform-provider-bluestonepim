@@ -34,7 +34,6 @@ resource "bluestonepim_category" "my_category" {
 
 ### Optional
 
-- `context_id` (String) Context of presented entity.
 - `description` (String) The description of the Category.
 - `number` (String) Number
 - `parent_id` (String) The ID of the parent Category.
