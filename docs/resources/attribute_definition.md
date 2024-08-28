@@ -27,7 +27,7 @@ resource "bluestonepim_attribute_definition" "my_attribute_definition" {
 
 ### Required
 
-- `data_type` (String) The data type of the attribute.
+- `data_type` (String) The data type of the attribute. For the `matrix`, `dictionary`, and `column` data types use the dedicated resources
 
 ### Optional
 
@@ -39,8 +39,63 @@ resource "bluestonepim_attribute_definition" "my_attribute_definition" {
 - `internal` (Boolean) Whether the attribute is internal.
 - `name` (String) The name of the Category.
 - `number` (String) Number
+- `restrictions` (Attributes) The restrictions of the attribute. (see [below for nested schema](#nestedatt--restrictions))
 - `unit` (String) The unit of the attribute.
 
 ### Read-Only
 
 - `id` (String) Platform-generated unique identifier of the Category.
+
+<a id="nestedatt--restrictions"></a>
+### Nested Schema for `restrictions`
+
+Optional:
+
+- `enum` (Attributes) (see [below for nested schema](#nestedatt--restrictions--enum))
+- `range` (Attributes) (see [below for nested schema](#nestedatt--restrictions--range))
+- `text` (Attributes) (see [below for nested schema](#nestedatt--restrictions--text))
+
+<a id="nestedatt--restrictions--enum"></a>
+### Nested Schema for `restrictions.enum`
+
+Optional:
+
+- `type` (String) The type of the enum.
+- `values` (Attributes List) (see [below for nested schema](#nestedatt--restrictions--enum--values))
+
+<a id="nestedatt--restrictions--enum--values"></a>
+### Nested Schema for `restrictions.enum.values`
+
+Required:
+
+- `value` (String) The value of the enum.
+
+Optional:
+
+- `metadata` (String) The metadata of the enum.
+- `number` (String) The number of the enum.
+
+Read-Only:
+
+- `value_id` (String) The ID of the value.
+
+
+
+<a id="nestedatt--restrictions--range"></a>
+### Nested Schema for `restrictions.range`
+
+Optional:
+
+- `max` (String) The maximum value of the range.
+- `min` (String) The minimum value of the range.
+- `step` (String) The step value of the range.
+
+
+<a id="nestedatt--restrictions--text"></a>
+### Nested Schema for `restrictions.text`
+
+Optional:
+
+- `max_length` (Number) The maximum length of the text.
+- `pattern` (String) The pattern of the text.
+- `whitespaces` (Boolean) Whether the text allows whitespaces.

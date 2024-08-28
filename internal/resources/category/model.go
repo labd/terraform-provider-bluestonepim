@@ -8,6 +8,5 @@ type Category struct {
 	Name        types.String `tfsdk:"name"`
 	Number      types.String `tfsdk:"number"`
 	Description types.String `tfsdk:"description"`
-	ContextId   types.String `tfsdk:"context_id"`
 	ParentId    types.String `tfsdk:"parent_id"`
 }

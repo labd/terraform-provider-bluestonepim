@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -11,16 +12,14 @@ import (
 	"github.com/labd/bluestonepim-go-sdk/global_settings"
 	"github.com/labd/bluestonepim-go-sdk/notification_external"
 	"github.com/labd/bluestonepim-go-sdk/pim"
-	"github.com/labd/terraform-provider-bluestonepim/internal/resources/webhook"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
-	"net/http"
-
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_definition"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_attribute"
 	bpcontext "github.com/labd/terraform-provider-bluestonepim/internal/resources/context"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/webhook"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 // Ensure BluestonePimProvider satisfies various provider interfaces.
@@ -120,19 +119,17 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 		)
 	}
 
+	//Retry when we hit rate limits
+	retryableClient := retryablehttp.NewClient()
+
 	oauth2Config := &clientcredentials.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		TokenURL:     authURL,
 	}
 
-	innerHttpClient := http.DefaultClient
-	if p.debug {
-		innerHttpClient.Transport = utils.DebugTransport
-	}
-
 	httpClient := oauth2Config.Client(
-		context.WithValue(context.Background(), oauth2.HTTPClient, innerHttpClient),
+		context.WithValue(context.Background(), oauth2.HTTPClient, retryableClient),
 	)
 
 	pimClient, err := pim.NewClientWithResponses(

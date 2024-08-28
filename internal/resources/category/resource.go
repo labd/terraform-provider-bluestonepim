@@ -3,7 +3,6 @@ package category
 import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/labd/bluestonepim-go-sdk/pim"
 
@@ -55,13 +54,6 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 100),
 				},
-			},
-			"context_id": schema.StringAttribute{
-				MarkdownDescription: "Context of presented entity.",
-				Computed:            true,
-				Optional:            true,
-				//en is the default context
-				Default: stringdefault.StaticString("en"),
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the Category.",
@@ -126,7 +118,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	result, diag := GetCategoryByID(ctx, r.client, current.Id.ValueString(), current.ContextId.ValueStringPointer())
+	result, diag := GetCategoryByID(ctx, r.client, current.Id.ValueString())
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
