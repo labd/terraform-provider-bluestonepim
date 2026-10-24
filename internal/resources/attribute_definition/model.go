@@ -3,6 +3,8 @@ package attribute_definition
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/labd/bluestonepim-go-sdk/pim"
+
+	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
 type AttributeDefinition struct {
@@ -34,22 +36,17 @@ func ToRestrictionsDto(r *Restrictions) *pim.RestrictionsDto {
 	if r.Enum != nil {
 		var values []pim.SelectAttributeValueDto
 		for _, v := range *r.Enum.Values {
-			var valueId *string
-			if !v.ValueId.IsNull() && !v.ValueId.IsUnknown() {
-				valueId = v.ValueId.ValueStringPointer()
-			}
-
 			values = append(values, pim.SelectAttributeValueDto{
 				Metadata: v.Metadata.ValueStringPointer(),
-				Number:   v.Number.ValueStringPointer(),
-				Value:    v.Value.ValueString(),
-				ValueId:  valueId,
+				Number:   utils.KnownStringPointer(v.Number),
+				Value:    v.Value.ValueStringPointer(),
+				ValueId:  utils.KnownStringPointer(v.ValueId),
 			})
 		}
 
 		return &pim.RestrictionsDto{
 			Enum: &pim.SelectRestrictionsDto{
-				Type:   r.Enum.Type.ValueStringPointer(),
+				Type:   utils.KnownStringPointer(r.Enum.Type),
 				Values: &values,
 			},
 		}

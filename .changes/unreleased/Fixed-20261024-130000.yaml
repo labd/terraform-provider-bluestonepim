@@ -1,0 +1,3 @@
+kind: Fixed
+body: Remove the `text/markdown` default of `content_type` and the `text` default of `restrictions.enum.type` on `bluestonepim_attribute_definition`, which caused changes for definitions without these values. `content_type` now accepts `text/html` instead of `html`
+time: 2026-10-24T13:00:00.000000+02:00

@@ -1,0 +1,3 @@
+kind: Fixed
+body: Retry rate limited requests for longer (10 retries, up to 60 seconds apart, with jitter), so large plans no longer fail with `giving up after 5 attempt(s)`
+time: 2026-10-24T18:00:02.000000+02:00

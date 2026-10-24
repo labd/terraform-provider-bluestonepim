@@ -1,0 +1,3 @@
+kind: Added
+body: Validate at plan time that the `restrictions` and `content_type` of a `bluestonepim_attribute_definition` are supported by its `data_type`, for example `restrictions.text.pattern` only for `pattern`
+time: 2026-10-24T18:00:01.000000+02:00

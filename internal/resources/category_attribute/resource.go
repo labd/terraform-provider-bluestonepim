@@ -2,21 +2,23 @@ package category_attribute
 
 import (
 	"context"
-	"github.com/labd/bluestonepim-go-sdk/pim"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/labd/bluestonepim-go-sdk/pim"
 
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/cla"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &Resource{}
-	_ resource.ResourceWithConfigure   = &Resource{}
-	_ resource.ResourceWithImportState = &Resource{}
+	_ resource.Resource                   = &Resource{}
+	_ resource.ResourceWithConfigure      = &Resource{}
+	_ resource.ResourceWithImportState    = &Resource{}
+	_ resource.ResourceWithValidateConfig = &Resource{}
 )
 
 func NewResource() resource.Resource {
@@ -34,25 +36,34 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 // Schema defines the schema for the data source.
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		MarkdownDescription: "",
-		Attributes: map[string]schema.Attribute{
-			"category_id": schema.StringAttribute{
-				MarkdownDescription: "Category ID",
-				Required:            true,
-			},
-			"attribute_definition_id": schema.StringAttribute{
-				MarkdownDescription: "Attribute definition ID",
-				Required:            true,
-			},
-			"mandatory": schema.BoolAttribute{
-				MarkdownDescription: "Force classification",
-				Computed:            true,
-				Optional:            true,
-				Default:             booldefault.StaticBool(false),
-			},
+	attributes := cla.SchemaAttributes(true)
+	attributes["value"] = schema.StringAttribute{
+		MarkdownDescription: "The value, for example `2025-04-25` for a date or `true` for a boolean. For " +
+			"single select and multi select definitions use the select value IDs, separated by commas for " +
+			"multi select.",
+		Optional: true,
+		Validators: []validator.String{
+			stringvalidator.LengthAtLeast(1),
 		},
 	}
+
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Assigns an attribute definition with a simple data type (text, number, date, " +
+			"boolean, select, ...) to a category (Category Level Attribute). Use " +
+			"`bluestonepim_category_column_attribute`, `bluestonepim_category_matrix_attribute`, " +
+			"`bluestonepim_category_dictionary_attribute` or `bluestonepim_category_compound_attribute` for the " +
+			"other data types.",
+		Attributes: attributes,
+	}
+}
+
+func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config CategoryAttribute
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	cla.ValidateLocked(config.Locked, config.Mandatory, resp)
 }
 
 // Configure adds the provider configured client to the data source.
@@ -73,99 +84,74 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 // Create creates the resource and sets the initial Terraform state.
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan CategoryAttribute
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := AssignAttributeDefinition(ctx, r.client, &plan)
+	result, diag := CreateCategoryAttribute(ctx, r.client, &plan)
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
 	}
 
-	// Set state to fully populated data
-	diags = resp.State.Set(ctx, result)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var current CategoryAttribute
-	diags := req.State.Get(ctx, &current)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &current)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, diag := GetCategoryAttributeByID(
+	result, diag := GetCategoryAttribute(
 		ctx, r.client, current.CategoryId.ValueString(), current.AttributeDefinitionId.ValueString())
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
 	}
 
-	// Set refreshed state
-	diags = resp.State.Set(ctx, result)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	if result == nil {
+		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Retrieve values from plan
-	var plan CategoryAttribute
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	var plan, state CategoryAttribute
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Retrieve values from state
-	var state CategoryAttribute
-	diags = req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	result, diag := UpdateAttributeDefinition(ctx, r.client, &state, &plan)
+	result, diag := UpdateCategoryAttribute(ctx, r.client, &state, &plan)
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
 		return
 	}
 
-	diags = resp.State.Set(ctx, result)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// Retrieve values from state
 	var state CategoryAttribute
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	diag := UnassignAttributeDefinition(ctx, r.client, state.CategoryId.ValueString(), state.AttributeDefinitionId.ValueString())
-	if diag != nil {
+	if diag := cla.Delete(ctx, r.client, state.CategoryId.ValueString(), state.AttributeDefinitionId.ValueString()); diag != nil {
 		resp.Diagnostics.Append(diag)
-		return
 	}
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Retrieve import ID and save to id attribute
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	cla.ImportState(ctx, req, resp)
 }

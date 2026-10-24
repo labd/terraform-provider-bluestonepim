@@ -1,0 +1,1 @@
+terraform import bluestonepim_dictionary_attribute_value.netherlands <attribute_definition_id>/<value_id>

@@ -3,12 +3,12 @@
 page_title: "bluestonepim_category_attribute Resource - terraform-provider-bluestonepim"
 subcategory: ""
 description: |-
-  
+  Assigns an attribute definition with a simple data type (text, number, date, boolean, select, ...) to a category (Category Level Attribute). Use bluestonepim_category_column_attribute, bluestonepim_category_matrix_attribute, bluestonepim_category_dictionary_attribute or bluestonepim_category_compound_attribute for the other data types.
 ---
 
 # bluestonepim_category_attribute (Resource)
 
-
+Assigns an attribute definition with a simple data type (text, number, date, boolean, select, ...) to a category (Category Level Attribute). Use `bluestonepim_category_column_attribute`, `bluestonepim_category_matrix_attribute`, `bluestonepim_category_dictionary_attribute` or `bluestonepim_category_compound_attribute` for the other data types.
 
 ## Example Usage
 
@@ -25,7 +25,9 @@ resource "bluestonepim_attribute_definition" "my_attribute_definition" {
 resource "bluestonepim_category_attribute" "my_category_attribute" {
   category_id             = bluestonepim_category.my_category.id
   attribute_definition_id = bluestonepim_attribute_definition.my_attribute_definition.id
+  value                   = "Some value"
   mandatory               = true
+  propagate               = true
 }
 ```
 
@@ -34,9 +36,22 @@ resource "bluestonepim_category_attribute" "my_category_attribute" {
 
 ### Required
 
-- `attribute_definition_id` (String) Attribute definition ID
-- `category_id` (String) Category ID
+- `attribute_definition_id` (String) The ID of the attribute definition.
+- `category_id` (String) The ID of the category.
 
 ### Optional
 
-- `mandatory` (Boolean) Force classification
+- `locked` (Boolean) Require the products in this category to keep the value of this attribute.
+- `mandatory` (Boolean) Require all products in this category to have a value for this attribute. Must be `true` when `locked` is set, since locking also makes the attribute mandatory.
+- `propagate` (Boolean) Propagate the attribute and its value to all subcategories and their products.
+- `value` (String) The value, for example `2025-04-25` for a date or `true` for a boolean. For single select and multi select definitions use the select value IDs, separated by commas for multi select.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import bluestonepim_category_attribute.my_category_attribute <category_id>/<attribute_definition_id>
+```

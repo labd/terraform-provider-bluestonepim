@@ -1,0 +1,3 @@
+kind: Added
+body: Add `bluestonepim_category_context` resource to set the name and description of a category for a specific context
+time: 2026-10-24T15:00:00.000000+02:00
