@@ -35,7 +35,7 @@ resource "bluestonepim_category" "my_category" {
 ### Optional
 
 - `description` (String) The description of the Category.
-- `number` (String) Number
+- `number` (String) Number. Defaults to the category ID when not set.
 - `parent_id` (String) The ID of the parent Category.
 
 ### Read-Only

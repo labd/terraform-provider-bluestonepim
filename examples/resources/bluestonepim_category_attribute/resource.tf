@@ -10,5 +10,7 @@ resource "bluestonepim_attribute_definition" "my_attribute_definition" {
 resource "bluestonepim_category_attribute" "my_category_attribute" {
   category_id             = bluestonepim_category.my_category.id
   attribute_definition_id = bluestonepim_attribute_definition.my_attribute_definition.id
+  value                   = "Some value"
   mandatory               = true
+  propagate               = true
 }

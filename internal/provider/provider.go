@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -13,9 +12,20 @@ import (
 	"github.com/labd/bluestonepim-go-sdk/notification_external"
 	"github.com/labd/bluestonepim-go-sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_definition"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_group"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_attribute"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_column_attribute"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_compound_attribute"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_context"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_dictionary_attribute"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_matrix_attribute"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/column_attribute_definition"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/compound_attribute_definition"
 	bpcontext "github.com/labd/terraform-provider-bluestonepim/internal/resources/context"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/dictionary_attribute_definition"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/dictionary_attribute_value"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/matrix_attribute_definition"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/webhook"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 	"golang.org/x/oauth2"
@@ -93,7 +103,7 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 		clientSecret = data.ClientSecret.ValueString()
 	}
 
-	if data.ClientSecret.ValueString() != "" {
+	if data.ApiURL.ValueString() != "" {
 		apiURL = data.ApiURL.ValueString()
 	}
 
@@ -119,8 +129,7 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 		)
 	}
 
-	//Retry when we hit rate limits
-	retryableClient := retryablehttp.NewClient()
+	retryableClient := newRetryableClient(retryMax, retryWaitMin, retryWaitMax)
 
 	oauth2Config := &clientcredentials.Config{
 		ClientID:     clientID,
@@ -170,8 +179,19 @@ func (p *BluestonePimProvider) Configure(ctx context.Context, req provider.Confi
 func (p *BluestonePimProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		category.NewResource,
+		category_context.NewResource,
 		attribute_definition.NewResource,
+		attribute_group.NewResource,
+		column_attribute_definition.NewResource,
+		matrix_attribute_definition.NewResource,
+		dictionary_attribute_definition.NewResource,
+		dictionary_attribute_value.NewResource,
+		compound_attribute_definition.NewResource,
 		category_attribute.NewResource,
+		category_column_attribute.NewResource,
+		category_matrix_attribute.NewResource,
+		category_dictionary_attribute.NewResource,
+		category_compound_attribute.NewResource,
 		webhook.NewResource,
 		bpcontext.NewResource,
 	}

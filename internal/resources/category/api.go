@@ -12,10 +12,14 @@ import (
 )
 
 func GetCategoryByID(ctx context.Context, client pim.ClientWithResponsesInterface, id string) (*Category, diag.Diagnostic) {
-	resp, err := client.GetNodeWithResponse(ctx, id, nil)
+	resp, err := client.GetNodeWithResponse(ctx, id, &pim.GetNodeParams{})
 
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Unable to read data", err.Error())
+	}
+
+	if utils.IsNotFound(resp) {
+		return nil, nil
 	}
 
 	if d := utils.AssertStatusCode(resp, http.StatusOK); d != nil {
@@ -29,23 +33,29 @@ func GetCategoryByID(ctx context.Context, client pim.ClientWithResponsesInterfac
 		ParentId:    types.StringPointerValue(resp.JSON200.ParentId),
 		Description: types.StringPointerValue(resp.JSON200.Description),
 	}
+
+	// The API returns an empty description for categories without one
+	if resource.Description.ValueString() == "" {
+		resource.Description = types.StringNull()
+	}
 	return resource, nil
 }
 
 func UpdateCategory(ctx context.Context, client pim.ClientWithResponsesInterface, current *Category, planned *Category) (*Category, diag.Diagnostic) {
-	if !(planned.Name.Equal(current.Name) && planned.Number.Equal(current.Number) && planned.Description.Equal(current.Description)) {
-		response, err := client.UpdateCatalogNodeWithResponse(ctx, planned.Id.ValueString(), nil,
-			pim.UpdateCatalogNodeJSONRequestBody{
-				Name:        planned.Name.ValueString(),
-				Number:      planned.Number.ValueStringPointer(),
-				Description: planned.Description.ValueStringPointer(),
-			})
+	// Partial update, so only the changed fields are sent
+	body := pim.PartialUpdateCatalogNodeJSONRequestBody{}
+	if !planned.Name.Equal(current.Name) {
+		body.Name = &pim.PropertyUpdateString{Value: planned.Name.ValueStringPointer()}
+	}
+	if !planned.Number.IsUnknown() && !planned.Number.Equal(current.Number) {
+		body.Number = planned.Number.ValueStringPointer()
+	}
+	if !planned.Description.Equal(current.Description) {
+		body.Description = &pim.PropertyUpdateString{Value: planned.Description.ValueStringPointer()}
+	}
 
-		if err != nil {
-			return nil, diag.NewErrorDiagnostic("Unable to update category", err.Error())
-		}
-
-		if d := utils.AssertStatusCode(response, http.StatusNoContent); d != nil {
+	if body.Name != nil || body.Number != nil || body.Description != nil {
+		if d := PartialUpdate(ctx, client, current.Id.ValueString(), nil, body); d != nil {
 			return nil, d
 		}
 	}
@@ -64,17 +74,21 @@ func UpdateCategory(ctx context.Context, client pim.ClientWithResponsesInterface
 		}
 	}
 
-	return GetCategoryByID(ctx, client, current.Id.ValueString())
+	result, d := GetCategoryByID(ctx, client, current.Id.ValueString())
+	if d == nil && result == nil {
+		d = utils.NotFoundError("Category", current.Id.ValueString())
+	}
+	return result, d
 }
 
 func CreateCategory(ctx context.Context, client pim.ClientWithResponsesInterface, resource *Category) (*Category, diag.Diagnostic) {
 	res, err := client.CreateCategoryWithResponse(ctx,
 		&pim.CreateCategoryParams{
-			Validation: "NAME",
+			Validation: utils.Ref(pim.CreateCategoryParamsValidationNAME),
 		},
 		pim.CreateCategoryJSONRequestBody{
 			Name:     resource.Name.ValueString(),
-			Number:   resource.Number.ValueStringPointer(),
+			Number:   utils.KnownStringPointer(resource.Number),
 			ParentId: resource.ParentId.ValueStringPointer(),
 		},
 	)
@@ -90,21 +104,21 @@ func CreateCategory(ctx context.Context, client pim.ClientWithResponsesInterface
 
 	resourceId := res.HTTPResponse.Header.Get("Resource-Id")
 
-	//Workaround because we cannot set description on create
-	resU, err := client.UpdateCatalogNodeWithResponse(ctx, resourceId, nil, pim.UpdateCatalogNodeJSONRequestBody{
-		Name:        resource.Name.ValueString(),
-		Number:      resource.Number.ValueStringPointer(),
-		Description: resource.Description.ValueStringPointer(),
-	})
-	if err != nil {
-		return nil, diag.NewErrorDiagnostic("Failed updating category", err.Error())
+	// The description cannot be set on create
+	if !resource.Description.IsNull() {
+		body := pim.PartialUpdateCatalogNodeJSONRequestBody{
+			Description: &pim.PropertyUpdateString{Value: resource.Description.ValueStringPointer()},
+		}
+		if d := PartialUpdate(ctx, client, resourceId, nil, body); d != nil {
+			return nil, d
+		}
 	}
 
-	if d := utils.AssertStatusCode(resU, http.StatusNoContent); d != nil {
-		return nil, d
+	result, d := GetCategoryByID(ctx, client, resourceId)
+	if d == nil && result == nil {
+		d = utils.NotFoundError("Category", resourceId)
 	}
-
-	return GetCategoryByID(ctx, client, resourceId)
+	return result, d
 }
 
 func DeleteCategory(ctx context.Context, client pim.ClientWithResponsesInterface, resource *Category) diag.Diagnostic {
@@ -113,9 +127,22 @@ func DeleteCategory(ctx context.Context, client pim.ClientWithResponsesInterface
 		return diag.NewErrorDiagnostic("Unable to delete category", err.Error())
 	}
 
-	if d := utils.AssertStatusCode(response, http.StatusNoContent); d != nil {
-		return d
+	if utils.IsNotFound(response) {
+		return nil
 	}
 
-	return nil
+	// The category is removed asynchronously
+	return utils.AssertStatusCode(response, http.StatusAccepted)
+}
+
+// PartialUpdate updates only the fields set in the body. When contextId is set
+// the values are written for that context only.
+func PartialUpdate(ctx context.Context, client pim.ClientWithResponsesInterface, id string, contextId *string, body pim.PartialUpdateCatalogNodeJSONRequestBody) diag.Diagnostic {
+	response, err := client.PartialUpdateCatalogNodeWithResponse(ctx, id,
+		&pim.PartialUpdateCatalogNodeParams{Context: contextId}, body)
+	if err != nil {
+		return diag.NewErrorDiagnostic("Unable to update category", err.Error())
+	}
+
+	return utils.AssertStatusCode(response, http.StatusNoContent)
 }

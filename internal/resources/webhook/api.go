@@ -22,6 +22,9 @@ func GetWebhookByID(
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Failed fetching webhook", err.Error())
 	}
+	if utils.IsNotFound(webhookRes) {
+		return nil, nil
+	}
 	if d := utils.AssertStatusCode(webhookRes, http.StatusOK); d != nil {
 		return nil, d
 	}
@@ -91,7 +94,11 @@ func CreateWebhook(
 		return nil, d
 	}
 
-	return GetWebhookByID(ctx, client, id)
+	result, d := GetWebhookByID(ctx, client, id)
+	if d == nil && result == nil {
+		d = utils.NotFoundError("Webhook", id)
+	}
+	return result, d
 }
 
 func UpdateWebhookById(
@@ -165,7 +172,11 @@ func UpdateWebhookById(
 
 	}
 
-	return GetWebhookByID(ctx, client, id)
+	result, d := GetWebhookByID(ctx, client, id)
+	if d == nil && result == nil {
+		d = utils.NotFoundError("Webhook", id)
+	}
+	return result, d
 }
 
 func DeleteWebhookByID(
@@ -176,6 +187,9 @@ func DeleteWebhookByID(
 	res, err := client.Delete(ctx, id)
 	if err != nil {
 		return diag.NewErrorDiagnostic("Failed deleting webhook", err.Error())
+	}
+	if res.StatusCode == http.StatusNotFound {
+		return nil
 	}
 	if res.StatusCode != http.StatusOK {
 		return diag.NewErrorDiagnostic("Failed deleting webhook", fmt.Sprintf("Expected status code %d, got %d", http.StatusOK, res.StatusCode))

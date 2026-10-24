@@ -78,6 +78,10 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		resp.Diagnostics.Append(diag)
 		return
 	}
+	if resource == nil {
+		resp.Diagnostics.Append(utils.NotFoundError("Category", data.Id.ValueString()))
+		return
+	}
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &resource)...)

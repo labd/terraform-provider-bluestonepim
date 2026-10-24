@@ -1,0 +1,3 @@
+kind: Fixed
+body: Store an empty category description as null on `bluestonepim_category` and keep the generated `number` stable
+time: 2026-10-24T13:00:03.000000+02:00

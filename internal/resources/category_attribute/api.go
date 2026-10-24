@@ -8,136 +8,91 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/labd/bluestonepim-go-sdk/pim"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/cla"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
-func GetCategoryAttributeByID(
-	ctx context.Context,
-	client pim.ClientWithResponsesInterface,
-	categoryId, attributeId string,
-) (*CategoryAttribute, diag.Diagnostic) {
-	response, err := client.ListAttributesAttachedToGivenNodeWithResponse(
-		ctx, categoryId, &pim.ListAttributesAttachedToGivenNodeParams{})
-
-	if err != nil {
-		return nil, diag.NewErrorDiagnostic("Unable to read data", err.Error())
+func fromResponse(r *pim.CategoryAttributeMetadataResponse, categoryId, attributeId string) *CategoryAttribute {
+	flags := cla.FlagsFromResponse(r, categoryId)
+	result := &CategoryAttribute{
+		CategoryId:            types.StringValue(categoryId),
+		AttributeDefinitionId: types.StringValue(attributeId),
+		Value:                 types.StringNull(),
+		Mandatory:             flags.Mandatory,
+		Propagate:             flags.Propagate,
+		Locked:                flags.Locked,
 	}
+	// Empty values are stored as null, the schema doesn't allow empty values
+	if r.AttributeValue != nil && *r.AttributeValue != "" {
+		result.Value = types.StringValue(*r.AttributeValue)
+	}
+	return result
+}
 
-	if d := utils.AssertStatusCode(response, http.StatusOK); d != nil {
+// GetCategoryAttribute returns nil when the attribute is not assigned to the category.
+func GetCategoryAttribute(ctx context.Context, client pim.ClientWithResponsesInterface, categoryId, attributeId string) (*CategoryAttribute, diag.Diagnostic) {
+	r, d := cla.Get(ctx, client, categoryId, attributeId)
+	if d != nil || r == nil {
 		return nil, d
 	}
-
-	resources := *response.JSON200.Data
-	if len(resources) == 0 {
-		return nil, nil
-	}
-
-	for _, resource := range resources {
-		if *resource.AttributeDefinitionId != attributeId {
-			continue
-		}
-
-		// I think this should not be able to happen (since we fetch on category),
-		// but we check it anyway.
-		if *resource.AssignedOn != categoryId {
-			continue
-		}
-
-		result := &CategoryAttribute{
-			CategoryId:            types.StringValue(categoryId),
-			AttributeDefinitionId: types.StringValue(attributeId),
-		}
-
-		if resource.MandatorySetOn != nil {
-			result.Mandatory = types.BoolValue(*resource.MandatorySetOn == categoryId)
-		} else {
-			result.Mandatory = types.BoolValue(false)
-		}
-
-		return result, nil
-	}
-
-	return nil, nil
+	return fromResponse(r, categoryId, attributeId), nil
 }
 
-func UpdateAttributeDefinition(
-	ctx context.Context,
-	client pim.ClientWithResponsesInterface,
-	current *CategoryAttribute,
-	resource *CategoryAttribute,
-) (*CategoryAttribute, diag.Diagnostic) {
+func CreateCategoryAttribute(ctx context.Context, client pim.ClientWithResponsesInterface, planned *CategoryAttribute) (*CategoryAttribute, diag.Diagnostic) {
+	categoryId := planned.CategoryId.ValueString()
+	attributeId := planned.AttributeDefinitionId.ValueString()
 
-	if resource.Mandatory.ValueBool() != current.Mandatory.ValueBool() {
-		response, err := client.UpdateNodeAttributeValueWithResponse(ctx,
-			current.CategoryId.ValueString(),
-			current.AttributeDefinitionId.ValueString(),
-			nil,
-			pim.UpdateNodeAttributeValueJSONRequestBody{
-				Mandatory: resource.Mandatory.ValueBoolPointer(),
-			},
-		)
-		if err != nil {
-			return nil, diag.NewErrorDiagnostic("Unable to update category", err.Error())
-		}
-
-		if d := utils.AssertStatusCode(response, http.StatusAccepted); d != nil {
-			return nil, d
-		}
+	// Assigning a compound attribute also assigns its sub attributes, so the
+	// attribute can already be assigned. Take it over instead of failing.
+	existing, d := GetCategoryAttribute(ctx, client, categoryId, attributeId)
+	if d != nil {
+		return nil, d
+	}
+	if existing != nil {
+		return UpdateCategoryAttribute(ctx, client, existing, planned)
 	}
 
-	return GetCategoryAttributeByID(
-		ctx, client, current.CategoryId.ValueString(), current.AttributeDefinitionId.ValueString())
-}
-
-func AssignAttributeDefinition(
-	ctx context.Context,
-	client pim.ClientWithResponsesInterface,
-	resource *CategoryAttribute,
-) (*CategoryAttribute, diag.Diagnostic) {
-
-	response, err := client.CreateCatalogNodeAttributeWithResponse(ctx,
-		resource.CategoryId.ValueString(),
-		resource.AttributeDefinitionId.ValueString(),
-		&pim.CreateCatalogNodeAttributeParams{
-			ForceCla: utils.Ref(true),
-		},
-		pim.CreateCatalogNodeAttributeJSONRequestBody{
-			Value: utils.Ref(""),
-		},
+	response, err := client.CreateCatalogNodeAttributeWithResponse(ctx, categoryId, attributeId,
+		&pim.CreateCatalogNodeAttributeParams{ForceCla: utils.Ref(true)},
+		pim.CreateCatalogNodeAttributeJSONRequestBody{Value: planned.Value.ValueStringPointer()},
 	)
-
 	if err != nil {
-		d := diag.NewErrorDiagnostic("Unable to create attribute definition", err.Error())
-		return nil, d
+		return nil, diag.NewErrorDiagnostic("Unable to assign attribute definition to category", err.Error())
 	}
 
 	if d := utils.AssertStatusCode(response, http.StatusAccepted); d != nil {
 		return nil, d
 	}
 
-	current := &CategoryAttribute{
-		CategoryId:            resource.CategoryId,
-		AttributeDefinitionId: resource.AttributeDefinitionId,
-	}
-
-	// We call the update here since the API doesn't support setting certain flags
-	// on creation.
-	return UpdateAttributeDefinition(ctx, client, current, resource)
+	// The flags cannot be set on create
+	current := *planned
+	current.Mandatory = types.BoolValue(false)
+	current.Propagate = types.BoolValue(false)
+	current.Locked = types.BoolValue(false)
+	return UpdateCategoryAttribute(ctx, client, &current, planned)
 }
 
-func UnassignAttributeDefinition(
-	ctx context.Context,
-	client pim.ClientWithResponsesInterface,
-	categoryId, attributeId string,
-) diag.Diagnostic {
-	response, err := client.DeleteAttributeFromNodeWithResponse(ctx, categoryId, attributeId)
-	if err != nil {
-		return diag.NewErrorDiagnostic("Unable to remove attribute definition from category", err.Error())
+// UpdateCategoryAttribute updates the value and flags in a single request.
+func UpdateCategoryAttribute(ctx context.Context, client pim.ClientWithResponsesInterface, current, planned *CategoryAttribute) (*CategoryAttribute, diag.Diagnostic) {
+	categoryId := current.CategoryId.ValueString()
+	attributeId := current.AttributeDefinitionId.ValueString()
+
+	body := pim.UpdateNodeAttributeValueJSONRequestBody{}
+	changed := cla.ApplyChangedFlags(current.flags(), planned.flags(), &body.Mandatory, &body.CopyAttribute, &body.Locked)
+	if !planned.Value.Equal(current.Value) {
+		body.AttributeValue = &pim.PropertyUpdateString{Value: planned.Value.ValueStringPointer()}
+		changed = true
 	}
 
-	if d := utils.AssertStatusCode(response, http.StatusNoContent); d != nil {
-		return d
+	if changed {
+		if d := cla.Patch(ctx, client, categoryId, attributeId, body); d != nil {
+			return nil, d
+		}
 	}
 
-	return nil
+	r, d := cla.MustGet(ctx, client, categoryId, attributeId)
+	if d != nil {
+		return nil, d
+	}
+	return fromResponse(r, categoryId, attributeId), nil
 }

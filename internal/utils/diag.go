@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"github.com/labd/bluestonepim-go-sdk/pim"
+	"net/http"
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -39,4 +40,23 @@ func getErrorResponse(response Response) *pim.ErrorResponse {
 		return field.Interface().(*pim.ErrorResponse)
 	}
 	return nil
+}
+
+// AssertSuccessStatusCode accepts any 2xx status code. Used for endpoints where
+// the exact success status code is not documented in the SDK.
+func AssertSuccessStatusCode(response Response) diag.Diagnostic {
+	if response.StatusCode() >= 200 && response.StatusCode() < 300 {
+		return nil
+	}
+	return AssertStatusCode(response, http.StatusOK)
+}
+
+func IsNotFound(response Response) bool {
+	return response.StatusCode() == http.StatusNotFound
+}
+
+// NotFoundError is returned when a resource that was just written, or that is
+// looked up by a data source, does not exist.
+func NotFoundError(kind, id string) diag.Diagnostic {
+	return diag.NewErrorDiagnostic(kind+" not found", fmt.Sprintf("%s %s was not found", kind, id))
 }

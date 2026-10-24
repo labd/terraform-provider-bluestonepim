@@ -48,9 +48,12 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				},
 			},
 			"number": schema.StringAttribute{
-				MarkdownDescription: "Number",
+				MarkdownDescription: "Number. Defaults to the category ID when not set.",
 				Computed:            true,
 				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 100),
 				},
@@ -121,6 +124,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	result, diag := GetCategoryByID(ctx, r.client, current.Id.ValueString())
 	if diag != nil {
 		resp.Diagnostics.Append(diag)
+		return
+	}
+
+	if result == nil {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 

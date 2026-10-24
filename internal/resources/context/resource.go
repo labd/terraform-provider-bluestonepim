@@ -114,6 +114,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
+	if result == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)

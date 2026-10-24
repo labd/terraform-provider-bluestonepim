@@ -13,10 +13,14 @@ import (
 )
 
 func GetAttributeDefinitionByID(ctx context.Context, client pim.ClientWithResponsesInterface, id string) (*AttributeDefinition, diag.Diagnostic) {
-	resp, err := client.GetAttributeDefinitionWithResponse(ctx, id, nil)
+	resp, err := client.GetAttributeDefinitionWithResponse(ctx, id, &pim.GetAttributeDefinitionParams{})
 
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Unable to read data", err.Error())
+	}
+
+	if utils.IsNotFound(resp) {
+		return nil, nil
 	}
 
 	if d := utils.AssertStatusCode(resp, http.StatusOK); d != nil {
@@ -27,7 +31,7 @@ func GetAttributeDefinitionByID(ctx context.Context, client pim.ClientWithRespon
 
 	result := &AttributeDefinition{
 		Id:             types.StringPointerValue(resource.Id),
-		Name:           types.StringValue(resource.Name),
+		Name:           types.StringPointerValue(resource.Name),
 		Description:    types.StringPointerValue(resource.Description),
 		Number:         types.StringPointerValue(resource.Number),
 		DataType:       types.StringValue(string(*resource.DataType)),
@@ -54,7 +58,7 @@ func FromRestrictionsDto(restrictions *pim.RestrictionsDto) *Restrictions {
 			values = append(values, EnumValue{
 				Metadata: types.StringPointerValue(v.Metadata),
 				Number:   types.StringPointerValue(v.Number),
-				Value:    types.StringValue(v.Value),
+				Value:    types.StringPointerValue(v.Value),
 				ValueId:  types.StringPointerValue(v.ValueId),
 			})
 		}
@@ -92,13 +96,13 @@ func CreateAttributeDefinition(ctx context.Context, client pim.ClientWithRespons
 		},
 		pim.CreateAttributeDefinitionJSONRequestBody{
 			Charset:        resource.CharacterSet.ValueStringPointer(),
-			ContentType:    resource.ContentType.ValueStringPointer(),
+			ContentType:    utils.KnownStringPointer(resource.ContentType),
 			DataType:       utils.Ref(pim.SimpleAttributeDefinitionRequestDataType(resource.DataType.ValueString())),
 			ExternalSource: resource.ExternalSource.ValueBoolPointer(),
 			Internal:       resource.Internal.ValueBoolPointer(),
 			GroupId:        resource.GroupID.ValueStringPointer(),
-			Name:           resource.Name.ValueString(),
-			Number:         resource.Number.ValueStringPointer(),
+			Name:           resource.Name.ValueStringPointer(),
+			Number:         utils.KnownStringPointer(resource.Number),
 			Unit:           resource.Unit.ValueStringPointer(),
 			Restrictions:   ToRestrictionsDto(resource.Restrictions),
 		},
@@ -115,20 +119,15 @@ func CreateAttributeDefinition(ctx context.Context, client pim.ClientWithRespons
 	resourceId := resC.HTTPResponse.Header.Get("Resource-Id")
 
 	//Workaround because we cannot set description on create
-	resU, err := client.UpdateMetadataWithResponse(ctx, resourceId, nil,
-		pim.UpdateMetadataJSONRequestBody{
-			Description: &pim.PropertyUpdateString{
-				Value: resource.Description.ValueStringPointer(),
-			},
-		})
-	if err != nil {
-		return nil, diag.NewErrorDiagnostic("Unable to update attribute definition description", err.Error())
-	}
-	if d := utils.AssertStatusCode(resU, http.StatusNoContent); d != nil {
+	if d := UpdateDescription(ctx, client, resourceId, resource.Description); d != nil {
 		return nil, d
 	}
 
-	return GetAttributeDefinitionByID(ctx, client, resourceId)
+	result, d := GetAttributeDefinitionByID(ctx, client, resourceId)
+	if d == nil && result == nil {
+		d = utils.NotFoundError("Attribute definition", resourceId)
+	}
+	return result, d
 }
 
 // Does not include description as this needs to be updated through the metadata
@@ -151,16 +150,16 @@ func attributeDefinitionHasChanges(current *AttributeDefinition, planned *Attrib
 
 func UpdateAttributeDefinition(ctx context.Context, client pim.ClientWithResponsesInterface, current *AttributeDefinition, planned *AttributeDefinition) (*AttributeDefinition, diag.Diagnostic) {
 	if attributeDefinitionHasChanges(current, planned) {
-		res, err := client.UpdateAttributeDefinitionWithResponse(ctx, current.Id.ValueString(), nil,
+		res, err := client.UpdateAttributeDefinitionWithResponse(ctx, current.Id.ValueString(), &pim.UpdateAttributeDefinitionParams{},
 			pim.UpdateAttributeDefinitionJSONRequestBody{
 				Charset:        planned.CharacterSet.ValueStringPointer(),
-				ContentType:    planned.ContentType.ValueStringPointer(),
+				ContentType:    utils.KnownStringPointer(planned.ContentType),
 				DataType:       utils.Ref(pim.SimpleAttributeDefinitionRequestDataType(planned.DataType.ValueString())),
 				ExternalSource: planned.ExternalSource.ValueBoolPointer(),
 				Internal:       planned.Internal.ValueBoolPointer(),
 				GroupId:        planned.GroupID.ValueStringPointer(),
-				Name:           planned.Name.ValueString(),
-				Number:         planned.Number.ValueStringPointer(),
+				Name:           planned.Name.ValueStringPointer(),
+				Number:         utils.KnownStringPointer(planned.Number),
 				Unit:           planned.Unit.ValueStringPointer(),
 				Restrictions:   ToRestrictionsDto(planned.Restrictions),
 			})
@@ -174,28 +173,26 @@ func UpdateAttributeDefinition(ctx context.Context, client pim.ClientWithRespons
 	}
 
 	if !planned.Description.Equal(current.Description) {
-		//Workaround because we cannot set description on create
-		resU, err := client.UpdateMetadataWithResponse(ctx, current.Id.ValueString(), nil,
-			pim.UpdateMetadataJSONRequestBody{
-				Description: &pim.PropertyUpdateString{
-					Value: planned.Description.ValueStringPointer(),
-				},
-			})
-		if err != nil {
-			return nil, diag.NewErrorDiagnostic("Unable to update attribute definition description", err.Error())
-		}
-		if d := utils.AssertStatusCode(resU, http.StatusNoContent); d != nil {
+		if d := UpdateDescription(ctx, client, current.Id.ValueString(), planned.Description); d != nil {
 			return nil, d
 		}
 	}
 
-	return GetAttributeDefinitionByID(ctx, client, current.Id.ValueString())
+	result, d := GetAttributeDefinitionByID(ctx, client, current.Id.ValueString())
+	if d == nil && result == nil {
+		d = utils.NotFoundError("Attribute definition", current.Id.ValueString())
+	}
+	return result, d
 }
 
 func DeleteAttributeDefinition(ctx context.Context, client pim.ClientWithResponsesInterface, id string) diag.Diagnostic {
 	response, err := client.DeleteAttributeDefinitionWithResponse(ctx, id)
 	if err != nil {
 		return diag.NewErrorDiagnostic("Unable to delete attribute definition", err.Error())
+	}
+
+	if utils.IsNotFound(response) {
+		return nil
 	}
 
 	if d := utils.AssertStatusCode(response, http.StatusAccepted); d != nil {

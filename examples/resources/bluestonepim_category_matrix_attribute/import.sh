@@ -1,0 +1,1 @@
+terraform import bluestonepim_category_matrix_attribute.my_matrix_attribute <category_id>/<attribute_definition_id>

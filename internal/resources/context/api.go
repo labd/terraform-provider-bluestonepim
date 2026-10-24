@@ -19,13 +19,16 @@ func GetContextByID(
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Failed fetching context", err.Error())
 	}
+	if utils.IsNotFound(contextRes) {
+		return nil, nil
+	}
 	if d := utils.AssertStatusCode(contextRes, http.StatusOK); d != nil {
 		return nil, d
 	}
 	return &Context{
-		ID:         types.StringValue(contextRes.JSON200.Id),
-		Name:       types.StringValue(contextRes.JSON200.Name),
-		Locale:     types.StringValue(contextRes.JSON200.Locale),
+		ID:         types.StringPointerValue(contextRes.JSON200.Id),
+		Name:       types.StringPointerValue(contextRes.JSON200.Name),
+		Locale:     types.StringPointerValue(contextRes.JSON200.Locale),
 		FallbackID: types.StringPointerValue(contextRes.JSON200.Fallback),
 	}, nil
 }
@@ -38,8 +41,8 @@ func CreateContext(
 ) (*Context, diag.Diagnostic) {
 	contextRes, err := client.Create(ctx, global_settings.CreateJSONRequestBody{
 		Fallback: current.FallbackID.ValueStringPointer(),
-		Locale:   current.Locale.ValueString(),
-		Name:     current.Name.ValueString(),
+		Locale:   current.Locale.ValueStringPointer(),
+		Name:     current.Name.ValueStringPointer(),
 	})
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Failed creating context", err.Error())
@@ -50,7 +53,7 @@ func CreateContext(
 	}
 
 	//Workaround to find the id for the newly created context based on locale
-	res, err := client.FindWithResponse(ctx, nil)
+	res, err := client.FindWithResponse(ctx, &global_settings.FindParams{})
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Failed creating context", err.Error())
 	}
@@ -60,17 +63,27 @@ func CreateContext(
 	}
 
 	var foundContext *global_settings.ContextResponseDto
-	for _, d := range res.JSON200.Data {
-		if d.Locale == current.Locale.ValueString() {
-			foundContext = &d
-			break
+	if res.JSON200.Data != nil {
+		for _, d := range *res.JSON200.Data {
+			if d.Locale != nil && *d.Locale == current.Locale.ValueString() {
+				foundContext = &d
+				break
+			}
 		}
 	}
 	if foundContext == nil {
 		return nil, diag.NewErrorDiagnostic("Failed finding context in list", fmt.Sprintf("Failed finding context with locale %s in list", current.Locale.ValueString()))
 	}
 
-	return GetContextByID(ctx, client, foundContext.Id)
+	if foundContext.Id == nil {
+		return nil, diag.NewErrorDiagnostic("Failed finding context in list", "Context without ID returned")
+	}
+
+	result, d := GetContextByID(ctx, client, *foundContext.Id)
+	if d == nil && result == nil {
+		d = utils.NotFoundError("Context", *foundContext.Id)
+	}
+	return result, d
 }
 
 func UpdateContextById(
@@ -83,8 +96,8 @@ func UpdateContextById(
 	if !(current.Locale.Equal(planned.Locale) && current.FallbackID.Equal(planned.FallbackID) && current.Name.Equal(planned.Name)) {
 		updateRes, err := client.UpdateWithResponse(ctx, id, global_settings.UpdateJSONRequestBody{
 			Fallback: planned.FallbackID.ValueStringPointer(),
-			Locale:   planned.Locale.ValueString(),
-			Name:     planned.Name.ValueString(),
+			Locale:   planned.Locale.ValueStringPointer(),
+			Name:     planned.Name.ValueStringPointer(),
 		})
 		if err != nil {
 			return nil, diag.NewErrorDiagnostic("Failed updating context", err.Error())
@@ -94,7 +107,11 @@ func UpdateContextById(
 		}
 	}
 
-	return GetContextByID(ctx, client, id)
+	result, d := GetContextByID(ctx, client, id)
+	if d == nil && result == nil {
+		d = utils.NotFoundError("Context", id)
+	}
+	return result, d
 }
 
 func DeleteContextByID(
@@ -105,6 +122,9 @@ func DeleteContextByID(
 	res, err := client.ArchiveWithResponse(ctx, id)
 	if err != nil {
 		return diag.NewErrorDiagnostic("Failed archiving context", err.Error())
+	}
+	if utils.IsNotFound(res) {
+		return nil
 	}
 	if d := utils.AssertStatusCode(res, http.StatusNoContent); d != nil {
 		return d

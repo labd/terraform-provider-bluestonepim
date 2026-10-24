@@ -1,0 +1,1 @@
+terraform import bluestonepim_category_compound_attribute.my_compound_attribute <category_id>/<attribute_definition_id>
