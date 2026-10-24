@@ -1,0 +1,1 @@
+terraform import bluestonepim_attribute_group_definition_order.dimensions <group_id>

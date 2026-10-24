@@ -13,6 +13,8 @@ import (
 	"github.com/labd/bluestonepim-go-sdk/pim"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_definition"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_group"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_group_definition_order"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/attribute_group_order"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_attribute"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/category_column_attribute"
@@ -182,6 +184,8 @@ func (p *BluestonePimProvider) Resources(ctx context.Context) []func() resource.
 		category_context.NewResource,
 		attribute_definition.NewResource,
 		attribute_group.NewResource,
+		attribute_group_order.NewResource,
+		attribute_group_definition_order.NewResource,
 		column_attribute_definition.NewResource,
 		matrix_attribute_definition.NewResource,
 		dictionary_attribute_definition.NewResource,

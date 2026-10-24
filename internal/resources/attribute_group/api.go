@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/labd/bluestonepim-go-sdk/pim"
@@ -13,9 +14,10 @@ import (
 
 const pageSize = 1000
 
-// GetAttributeGroupByID returns nil when the group does not exist. The API has
-// no endpoint to fetch a single group, so we page through all groups.
-func GetAttributeGroupByID(ctx context.Context, client pim.ClientWithResponsesInterface, id string) (*AttributeGroup, diag.Diagnostic) {
+// ListAttributeGroups returns all attribute groups, in the order the API
+// returns them (which is assumed to be the display order).
+func ListAttributeGroups(ctx context.Context, client pim.ClientWithResponsesInterface) ([]pim.AttributeGroupResponse, diag.Diagnostic) {
+	var result []pim.AttributeGroupResponse
 	for page := int32(0); ; page++ {
 		resp, err := client.FindAttributeGroupsWithResponse(ctx, &pim.FindAttributeGroupsParams{
 			Page:     utils.Ref(page),
@@ -30,23 +32,35 @@ func GetAttributeGroupByID(ctx context.Context, client pim.ClientWithResponsesIn
 		}
 
 		if resp.JSON200.Data == nil {
-			return nil, nil
+			return result, nil
 		}
 
-		for _, group := range *resp.JSON200.Data {
-			if group.Id != nil && *group.Id == id {
-				return &AttributeGroup{
-					Id:     types.StringPointerValue(group.Id),
-					Name:   types.StringValue(group.Name),
-					Number: types.StringPointerValue(group.Number),
-				}, nil
-			}
-		}
-
+		result = append(result, *resp.JSON200.Data...)
 		if len(*resp.JSON200.Data) < pageSize {
-			return nil, nil
+			return result, nil
 		}
 	}
+}
+
+// GetAttributeGroupByID returns nil when the group does not exist. The API has
+// no endpoint to fetch a single group, so we list all groups.
+func GetAttributeGroupByID(ctx context.Context, client pim.ClientWithResponsesInterface, id string) (*AttributeGroup, diag.Diagnostic) {
+	groups, d := ListAttributeGroups(ctx, client)
+	if d != nil {
+		return nil, d
+	}
+
+	for _, group := range groups {
+		if group.Id != nil && *group.Id == id {
+			return &AttributeGroup{
+				Id:          types.StringPointerValue(group.Id),
+				Name:        types.StringValue(group.Name),
+				Number:      types.StringPointerValue(group.Number),
+				OrderByName: types.BoolPointerValue(group.OrderByName),
+			}, nil
+		}
+	}
+	return nil, nil
 }
 
 func CreateAttributeGroup(ctx context.Context, client pim.ClientWithResponsesInterface, resource *AttributeGroup) (*AttributeGroup, diag.Diagnostic) {
@@ -58,29 +72,67 @@ func CreateAttributeGroup(ctx context.Context, client pim.ClientWithResponsesInt
 		return nil, diag.NewErrorDiagnostic("Unable to create attribute group", err.Error())
 	}
 
-	if d := utils.AssertSuccessStatusCode(resp); d != nil {
+	if d := utils.AssertStatusCode(resp, http.StatusCreated); d != nil {
 		return nil, d
 	}
 
 	resourceId := resp.HTTPResponse.Header.Get("Resource-Id")
+
+	// The order strategy cannot be set on create
+	if isKnown(resource.OrderByName) {
+		if d := setOrderByName(ctx, client, resourceId, resource.OrderByName.ValueBool()); d != nil {
+			return nil, d
+		}
+	}
+
 	return getExisting(ctx, client, resourceId)
 }
 
 func UpdateAttributeGroup(ctx context.Context, client pim.ClientWithResponsesInterface, current *AttributeGroup, planned *AttributeGroup) (*AttributeGroup, diag.Diagnostic) {
+	id := current.Id.ValueString()
+
 	if !planned.Name.Equal(current.Name) {
-		resp, err := client.RenameWithResponse(ctx, current.Id.ValueString(), &pim.RenameParams{}, pim.RenameJSONRequestBody{
+		resp, err := client.RenameWithResponse(ctx, id, &pim.RenameParams{}, pim.RenameJSONRequestBody{
 			Name: planned.Name.ValueStringPointer(),
 		})
 		if err != nil {
 			return nil, diag.NewErrorDiagnostic("Unable to rename attribute group", err.Error())
 		}
 
-		if d := utils.AssertSuccessStatusCode(resp); d != nil {
+		if d := utils.AssertStatusCode(resp, http.StatusNoContent); d != nil {
 			return nil, d
 		}
 	}
 
-	return getExisting(ctx, client, current.Id.ValueString())
+	if isKnown(planned.Number) && !planned.Number.Equal(current.Number) {
+		resp, err := client.UpdateNumberWithResponse(ctx, id, pim.UpdateNumberJSONRequestBody{
+			Number: planned.Number.ValueString(),
+		})
+		if err != nil {
+			return nil, diag.NewErrorDiagnostic("Unable to update attribute group number", err.Error())
+		}
+
+		if d := utils.AssertStatusCode(resp, http.StatusNoContent); d != nil {
+			return nil, d
+		}
+	}
+
+	if isKnown(planned.OrderByName) && !planned.OrderByName.Equal(current.OrderByName) {
+		if d := setOrderByName(ctx, client, id, planned.OrderByName.ValueBool()); d != nil {
+			return nil, d
+		}
+	}
+
+	return getExisting(ctx, client, id)
+}
+
+func setOrderByName(ctx context.Context, client pim.ClientWithResponsesInterface, id string, orderByName bool) diag.Diagnostic {
+	resp, err := client.SetDefinitionsOrderStrategyInGroupWithResponse(ctx, id,
+		&pim.SetDefinitionsOrderStrategyInGroupParams{OrderByName: orderByName})
+	if err != nil {
+		return diag.NewErrorDiagnostic("Unable to update attribute group order strategy", err.Error())
+	}
+	return utils.AssertStatusCode(resp, http.StatusOK)
 }
 
 func DeleteAttributeGroup(ctx context.Context, client pim.ClientWithResponsesInterface, id string) diag.Diagnostic {
@@ -93,16 +145,17 @@ func DeleteAttributeGroup(ctx context.Context, client pim.ClientWithResponsesInt
 		return nil
 	}
 
-	return utils.AssertSuccessStatusCode(resp)
+	return utils.AssertStatusCode(resp, http.StatusNoContent)
 }
 
 func getExisting(ctx context.Context, client pim.ClientWithResponsesInterface, id string) (*AttributeGroup, diag.Diagnostic) {
 	result, d := GetAttributeGroupByID(ctx, client, id)
-	if d != nil {
-		return nil, d
+	if d == nil && result == nil {
+		d = utils.NotFoundError("Attribute group", id)
 	}
-	if result == nil {
-		return nil, diag.NewErrorDiagnostic("Attribute group not found", "Attribute group "+id+" was not found after writing it")
-	}
-	return result, nil
+	return result, d
+}
+
+func isKnown(v attr.Value) bool {
+	return !v.IsNull() && !v.IsUnknown()
 }
