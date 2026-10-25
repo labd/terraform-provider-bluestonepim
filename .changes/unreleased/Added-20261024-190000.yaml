@@ -1,3 +1,0 @@
-kind: Added
-body: Add `bluestonepim_attribute_group_order` and `bluestonepim_attribute_group_definition_order` to manage the order of attribute groups and of the definitions in a group, and `order_by_name` on `bluestonepim_attribute_group`. Changing the `number` of a group is now an in-place update instead of a replace
-time: 2026-10-24T19:00:00.000000+02:00

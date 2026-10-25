@@ -1,3 +1,0 @@
-kind: Fixed
-body: Fix import of `bluestonepim_category_attribute` (use `<category_id>/<attribute_definition_id>`), remove it from state when it no longer exists and recreate it when `category_id` or `attribute_definition_id` changes
-time: 2026-10-24T12:00:03.000000+02:00

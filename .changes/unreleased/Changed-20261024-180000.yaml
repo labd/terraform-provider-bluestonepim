@@ -1,3 +1,0 @@
-kind: Changed
-body: Changing `data_type` of a `bluestonepim_attribute_definition` is now rejected at plan time instead of replacing the definition, which would remove the attribute and its values from every product. Use `terraform apply -replace` to replace it deliberately
-time: 2026-10-24T18:00:00.000000+02:00

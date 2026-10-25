@@ -1,3 +1,0 @@
-kind: Fixed
-body: Update categories with a partial update instead of a full update, and no longer send an empty `number` when it is not configured
-time: 2026-10-24T15:00:01.000000+02:00
