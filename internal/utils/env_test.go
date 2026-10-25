@@ -1,13 +1,11 @@
 package utils
 
 import (
-	"os"
 	"testing"
 )
 
 func TestGetenvReturnsEnvValue(t *testing.T) {
-	os.Setenv("TEST_ENV", "value")
-	defer os.Unsetenv("TEST_ENV")
+	t.Setenv("TEST_ENV", "value")
 
 	result := GetEnv("TEST_ENV", "default")
 	if result != "value" {
@@ -23,8 +21,7 @@ func TestGetenvReturnsFallbackWhenEnvNotSet(t *testing.T) {
 }
 
 func TestGetenvReturnsFallbackWhenEnvIsEmpty(t *testing.T) {
-	os.Setenv("EMPTY_ENV", "")
-	defer os.Unsetenv("EMPTY_ENV")
+	t.Setenv("EMPTY_ENV", "")
 
 	result := GetEnv("EMPTY_ENV", "default")
 	if result != "default" {

@@ -3,11 +3,12 @@ package context
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/labd/bluestonepim-go-sdk/global_settings"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
-	"net/http"
 )
 
 func GetContextByID(

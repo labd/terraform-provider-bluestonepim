@@ -2,9 +2,10 @@ package attribute_definition
 
 import (
 	"context"
-	"github.com/labd/bluestonepim-go-sdk/pim"
 	"net/http"
 	"reflect"
+
+	"github.com/labd/bluestonepim-go-sdk/pim"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -75,7 +76,6 @@ func FromRestrictionsDto(restrictions *pim.RestrictionsDto) *Restrictions {
 			Min:  types.StringPointerValue(restrictions.Range.Min),
 			Step: types.StringPointerValue(restrictions.Range.Step),
 		}
-
 	}
 
 	if restrictions.Text != nil {
@@ -84,7 +84,6 @@ func FromRestrictionsDto(restrictions *pim.RestrictionsDto) *Restrictions {
 			Pattern:     types.StringPointerValue(restrictions.Text.Pattern),
 			Whitespaces: types.BoolPointerValue(restrictions.Text.Whitespaces),
 		}
-
 	}
 
 	return dto
@@ -143,7 +142,6 @@ func attributeDefinitionHasChanges(current *AttributeDefinition, planned *Attrib
 		planned.Internal.Equal(current.Internal) &&
 		planned.GroupID.Equal(current.GroupID) &&
 		planned.Unit.Equal(current.Unit))
-
 }
 
 func UpdateAttributeDefinition(ctx context.Context, client pim.ClientWithResponsesInterface, current *AttributeDefinition, planned *AttributeDefinition) (*AttributeDefinition, diag.Diagnostic) {
