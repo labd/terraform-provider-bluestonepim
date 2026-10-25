@@ -1,3 +1,0 @@
-kind: Changed
-body: Attribute definitions are created with their description in a single request, instead of a create followed by a separate description update
-time: 2026-10-25T13:00:00.000000+02:00

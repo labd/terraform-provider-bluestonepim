@@ -1,3 +1,0 @@
-kind: Added
-body: Add `value`, `propagate` and `locked` to `bluestonepim_category_attribute`, and add `bluestonepim_category_column_attribute`, `bluestonepim_category_matrix_attribute`, `bluestonepim_category_dictionary_attribute` and `bluestonepim_category_compound_attribute` for the other attribute definition types
-time: 2026-10-24T12:00:02.000000+02:00

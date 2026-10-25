@@ -1,3 +1,0 @@
-kind: Fixed
-body: Keep the `value_id` of select values on `bluestonepim_attribute_definition` when values are added, removed or reordered, by matching them on `value_id` or `number` (never on the label, which doesn't have to be unique). `value_id` can now also be set explicitly
-time: 2026-10-24T13:00:01.000000+02:00

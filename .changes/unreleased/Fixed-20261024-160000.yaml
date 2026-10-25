@@ -1,3 +1,0 @@
-kind: Fixed
-body: Remove `bluestonepim_attribute_definition`, `bluestonepim_category`, `bluestonepim_context` and `bluestonepim_webhook` from the state when they were deleted outside of Terraform, instead of failing
-time: 2026-10-24T16:00:00.000000+02:00
