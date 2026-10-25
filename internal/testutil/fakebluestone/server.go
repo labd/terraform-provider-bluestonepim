@@ -36,6 +36,7 @@ type Server struct {
 	categories  map[string]*category
 	clas        map[claKey]*cla
 	groups      []*attributeGroup
+	relations   map[string]*relation
 	requests    []Request
 }
 
@@ -70,6 +71,7 @@ func New(t *testing.T) *Server {
 		definitions: map[string]map[string]any{},
 		categories:  map[string]*category{},
 		clas:        map[claKey]*cla{},
+		relations:   map[string]*relation{},
 	}
 
 	mux := http.NewServeMux()
@@ -78,6 +80,7 @@ func New(t *testing.T) *Server {
 	s.registerCategories(mux)
 	s.registerCategoryAttributes(mux)
 	s.registerAttributeGroups(mux)
+	s.registerRelations(mux)
 
 	s.Server = httptest.NewServer(s.logWrites(mux))
 	t.Cleanup(s.Close)

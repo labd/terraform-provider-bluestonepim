@@ -28,6 +28,7 @@ import (
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/dictionary_attribute_definition"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/dictionary_attribute_value"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/matrix_attribute_definition"
+	"github.com/labd/terraform-provider-bluestonepim/internal/resources/relation"
 	"github.com/labd/terraform-provider-bluestonepim/internal/resources/webhook"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 	"golang.org/x/oauth2"
@@ -197,6 +198,7 @@ func (p *BluestonePimProvider) Resources(ctx context.Context) []func() resource.
 		category_dictionary_attribute.NewResource,
 		category_compound_attribute.NewResource,
 		webhook.NewResource,
+		relation.NewResource,
 		bpcontext.NewResource,
 	}
 }
