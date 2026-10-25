@@ -2,6 +2,7 @@ package category
 
 import (
 	"context"
+
 	"github.com/labd/bluestonepim-go-sdk/pim"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"

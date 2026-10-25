@@ -2,8 +2,9 @@ package category
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"net/http"
+
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 

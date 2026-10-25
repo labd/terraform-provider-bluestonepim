@@ -3,12 +3,13 @@ package webhook
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"slices"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/labd/bluestonepim-go-sdk/notification_external"
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
-	"net/http"
-	"slices"
 )
 
 const ResourceIdHeader = "Resource-Id"
@@ -169,7 +170,6 @@ func UpdateWebhookById(
 				return nil, d
 			}
 		}
-
 	}
 
 	result, d := GetWebhookByID(ctx, client, id)

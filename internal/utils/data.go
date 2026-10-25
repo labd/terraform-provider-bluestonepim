@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+
 	"github.com/labd/bluestonepim-go-sdk/global_settings"
 	"github.com/labd/bluestonepim-go-sdk/notification_external"
 	"github.com/labd/bluestonepim-go-sdk/pim"

@@ -2,9 +2,10 @@ package utils
 
 import (
 	"fmt"
-	"github.com/labd/bluestonepim-go-sdk/pim"
 	"net/http"
 	"reflect"
+
+	"github.com/labd/bluestonepim-go-sdk/pim"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 )
@@ -31,7 +32,7 @@ func AssertStatusCode(response Response, statusCode int) diag.Diagnostic {
 
 func getErrorResponse(response Response) *pim.ErrorResponse {
 	val := reflect.ValueOf(response)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
 

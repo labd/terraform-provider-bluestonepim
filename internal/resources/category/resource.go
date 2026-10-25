@@ -2,6 +2,7 @@ package category
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/labd/bluestonepim-go-sdk/pim"
@@ -186,7 +187,6 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		resp.Diagnostics.Append(diag)
 		return
 	}
-
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
