@@ -44,6 +44,7 @@ func GetDictionaryAttributeDefinitionByID(ctx context.Context, client pim.Client
 		Internal:           types.BoolPointerValue(resource.Internal),
 		SelectedValueLimit: types.Int32PointerValue(resource.SelectedValuesLimit),
 		ParentDefinitionId: types.StringPointerValue(resource.FilterParentDefinitionId),
+		ContextAware:       types.BoolPointerValue(resource.ContextAware),
 	}, nil
 }
 
@@ -69,6 +70,7 @@ func CreateDictionaryAttributeDefinition(ctx context.Context, client pim.ClientW
 			Name:                resource.Name.ValueStringPointer(),
 			Number:              utils.KnownStringPointer(resource.Number),
 			SelectedValuesLimit: resource.SelectedValueLimit.ValueInt32Pointer(),
+			ContextAware:        utils.KnownBoolPointer(resource.ContextAware),
 		},
 	)
 	if err != nil {

@@ -12,4 +12,5 @@ type DictionaryAttributeDefinition struct {
 	Internal           types.Bool   `tfsdk:"internal"`
 	SelectedValueLimit types.Int32  `tfsdk:"selected_values_limit"`
 	ParentDefinitionId types.String `tfsdk:"parent_definition_id"`
+	ContextAware       types.Bool   `tfsdk:"context_aware"`
 }

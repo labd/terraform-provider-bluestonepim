@@ -1,0 +1,3 @@
+kind: Added
+body: Add `context_aware` to all attribute definition resources, to create global attributes (one value shared by all contexts). Changing it on an existing definition is rejected at plan time
+time: 2026-10-25T11:00:00.000000+02:00

@@ -312,3 +312,47 @@ resource "bluestonepim_attribute_definition" "brand" {
 		},
 	)
 }
+
+func TestAttributeDefinition_ContextAware(t *testing.T) {
+	fake := fakebluestone.New(t)
+	var id string
+
+	definition := func(contextAware string) string {
+		return config(fake, `
+resource "bluestonepim_attribute_definition" "ean" {
+  name      = "EAN"
+  data_type = "text"
+`+contextAware+`
+}
+`)
+	}
+
+	runTest(t,
+		resource.TestStep{
+			Config: definition(`context_aware = false`),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("bluestonepim_attribute_definition.ean", "context_aware", "false"),
+				func(s *terraform.State) (err error) {
+					id, err = stateValue(s, "bluestonepim_attribute_definition.ean", "id")
+					if err != nil {
+						return err
+					}
+					if v := fake.Definition(id)["contextAware"]; v != false {
+						return fmt.Errorf("expected the definition to be created as global, got contextAware %v", v)
+					}
+					return nil
+				},
+			),
+		},
+		// Not configured: keeps the value from Bluestone
+		resource.TestStep{
+			Config: definition(``),
+			Check:  resource.TestCheckResourceAttr("bluestonepim_attribute_definition.ean", "context_aware", "false"),
+		},
+		// Switching is rejected at plan time
+		resource.TestStep{
+			Config:      definition(`context_aware = true`),
+			ExpectError: regexpMustCompile("context_aware cannot be changed"),
+		},
+	)
+}

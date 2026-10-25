@@ -33,6 +33,7 @@ resource "bluestonepim_attribute_definition" "my_attribute_definition" {
 
 - `character_set` (String) The unit of the attribute.
 - `content_type` (String) The content type of the attribute value. Only applies to the `formatted_text` data type, where Bluestone uses `text/markdown` when not set.
+- `context_aware` (Boolean) Whether the attribute can have a different value per context (language or channel). When `false` the attribute is global: it has one value, shared by all contexts. Uses the Bluestone default when not set. Cannot be changed after creation.
 - `description` (String) The description of the attribute.
 - `external_source` (Boolean) Whether the attribute is an external source.
 - `group_id` (String) The group ID of the attribute.

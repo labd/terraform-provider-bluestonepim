@@ -42,6 +42,7 @@ func GetAttributeDefinitionByID(ctx context.Context, client pim.ClientWithRespon
 		GroupID:        types.StringPointerValue(resource.GroupId),
 		Unit:           types.StringPointerValue(resource.Unit),
 		Restrictions:   FromRestrictionsDto(resource.Restrictions),
+		ContextAware:   types.BoolPointerValue(resource.ContextAware),
 	}
 	return result, nil
 }
@@ -105,6 +106,7 @@ func CreateAttributeDefinition(ctx context.Context, client pim.ClientWithRespons
 			Number:         utils.KnownStringPointer(resource.Number),
 			Unit:           resource.Unit.ValueStringPointer(),
 			Restrictions:   ToRestrictionsDto(resource.Restrictions),
+			ContextAware:   utils.KnownBoolPointer(resource.ContextAware),
 		},
 	)
 	if err != nil {
@@ -162,6 +164,8 @@ func UpdateAttributeDefinition(ctx context.Context, client pim.ClientWithRespons
 				Number:         utils.KnownStringPointer(planned.Number),
 				Unit:           planned.Unit.ValueStringPointer(),
 				Restrictions:   ToRestrictionsDto(planned.Restrictions),
+				// Cannot be changed, so this sends the current value
+				ContextAware: utils.KnownBoolPointer(planned.ContextAware),
 			})
 		if err != nil {
 			return nil, diag.NewErrorDiagnostic("Unable to update attribute definition", err.Error())

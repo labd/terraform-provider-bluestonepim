@@ -20,6 +20,7 @@ type AttributeDefinition struct {
 	Internal       types.Bool    `tfsdk:"internal"`
 	Unit           types.String  `tfsdk:"unit"`
 	Restrictions   *Restrictions `tfsdk:"restrictions"`
+	ContextAware   types.Bool    `tfsdk:"context_aware"`
 }
 
 type Restrictions struct {

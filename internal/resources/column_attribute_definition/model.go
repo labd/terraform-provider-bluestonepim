@@ -14,5 +14,6 @@ type ColumnAttributeDefinition struct {
 	ExternalSource types.Bool                               `tfsdk:"external_source"`
 	GroupID        types.String                             `tfsdk:"group_id"`
 	Internal       types.Bool                               `tfsdk:"internal"`
+	ContextAware   types.Bool                               `tfsdk:"context_aware"`
 	Columns        []attribute_definition.IdentifiableValue `tfsdk:"columns"`
 }
