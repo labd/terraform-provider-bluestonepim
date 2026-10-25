@@ -17,11 +17,25 @@ const pageSize = 1000
 // ListAttributeGroups returns all attribute groups, in the order the API
 // returns them (which is assumed to be the display order).
 func ListAttributeGroups(ctx context.Context, client pim.ClientWithResponsesInterface) ([]pim.AttributeGroupResponse, diag.Diagnostic) {
+	return ListAttributeGroupsInContext(ctx, client, nil)
+}
+
+// ListAttributeGroupsInContext returns all attribute groups with the names of
+// the given context, without falling back to other contexts. A nil context
+// uses the default context.
+func ListAttributeGroupsInContext(ctx context.Context, client pim.ClientWithResponsesInterface, contextId *string) ([]pim.AttributeGroupResponse, diag.Diagnostic) {
+	var fallback *bool
+	if contextId != nil {
+		fallback = utils.Ref(false)
+	}
+
 	var result []pim.AttributeGroupResponse
 	for page := int32(0); ; page++ {
 		resp, err := client.FindAttributeGroupsWithResponse(ctx, &pim.FindAttributeGroupsParams{
-			Page:     utils.Ref(page),
-			PageSize: utils.Ref(int32(pageSize)),
+			Page:            utils.Ref(page),
+			PageSize:        utils.Ref(int32(pageSize)),
+			Context:         contextId,
+			ContextFallback: fallback,
 		})
 		if err != nil {
 			return nil, diag.NewErrorDiagnostic("Unable to read data", err.Error())

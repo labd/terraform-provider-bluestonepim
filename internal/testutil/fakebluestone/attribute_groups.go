@@ -12,6 +12,8 @@ type attributeGroup struct {
 	name        string
 	number      string
 	orderByName bool
+	// names per context, other than the default context
+	names map[string]string
 	// manual order of the definitions in the group
 	definitionOrder []string
 }
@@ -95,13 +97,22 @@ func (s *Server) groupDefinitions(g *attributeGroup) []string {
 	return ids
 }
 
-func (s *Server) listAttributeGroups(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) listAttributeGroups(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	context := requestContext(r)
 	data := []map[string]any{}
 	for _, g := range s.groups {
-		data = append(data, map[string]any{"id": g.id, "name": g.name, "number": g.number, "orderByName": g.orderByName})
+		name := g.name
+		if context != defaultContext {
+			if n, ok := g.names[context]; ok {
+				name = n
+			} else if r.Header.Get("context-fallback") == "false" {
+				name = ""
+			}
+		}
+		data = append(data, map[string]any{"id": g.id, "name": name, "number": g.number, "orderByName": g.orderByName})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": data})
 }
@@ -144,8 +155,31 @@ func (s *Server) renameAttributeGroup(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "group not found")
 		return
 	}
-	g.name, _ = bodyFrom(r.Context())["name"].(string)
+	name, _ := bodyFrom(r.Context())["name"].(string)
+	if context := requestContext(r); context != defaultContext {
+		if g.names == nil {
+			g.names = map[string]string{}
+		}
+		g.names[context] = name
+	} else {
+		g.name = name
+	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// AttributeGroupName returns the name of a group in a context (without
+// fallback).
+func (s *Server) AttributeGroupName(id, context string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, g := s.group(id)
+	if g == nil {
+		return ""
+	}
+	if context == defaultContext {
+		return g.name
+	}
+	return g.names[context]
 }
 
 func (s *Server) updateAttributeGroupNumber(w http.ResponseWriter, r *http.Request) {

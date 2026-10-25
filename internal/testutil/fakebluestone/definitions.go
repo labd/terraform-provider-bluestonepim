@@ -35,6 +35,19 @@ func (s *Server) RemoveDefinition(id string) {
 	delete(s.definitions, id)
 }
 
+// DefinitionValues returns the name and description stored for a context
+// (without fallback).
+func (s *Server) DefinitionValues(id, context string) map[string]any {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	values, _ := s.definitions[id]["contextValues"].(map[string]map[string]any)
+	result := map[string]any{}
+	for k, v := range values[context] {
+		result[k] = v
+	}
+	return result
+}
+
 // Definition returns a stored definition, or nil.
 func (s *Server) Definition(id string) map[string]any {
 	s.mu.Lock()
@@ -70,7 +83,29 @@ func (s *Server) getDefinition(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "definition not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, definition)
+
+	context := requestContext(r)
+	if context == defaultContext {
+		writeJSON(w, http.StatusOK, definition)
+		return
+	}
+
+	// Names and descriptions are stored per context
+	response := map[string]any{}
+	for k, v := range definition {
+		if k != "contextValues" {
+			response[k] = v
+		}
+	}
+	values, _ := definition["contextValues"].(map[string]map[string]any)
+	for _, field := range []string{"name", "description"} {
+		if v, ok := values[context][field]; ok {
+			response[field] = v
+		} else if r.Header.Get("context-fallback") == "false" {
+			delete(response, field)
+		}
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (s *Server) updateDefinition(w http.ResponseWriter, r *http.Request) {
@@ -101,12 +136,24 @@ func (s *Server) updateDefinitionMetadata(w http.ResponseWriter, r *http.Request
 	}
 
 	body := bodyFrom(r.Context())
+	target := definition
+	if context := requestContext(r); context != defaultContext {
+		values, _ := definition["contextValues"].(map[string]map[string]any)
+		if values == nil {
+			values = map[string]map[string]any{}
+			definition["contextValues"] = values
+		}
+		if values[context] == nil {
+			values[context] = map[string]any{}
+		}
+		target = values[context]
+	}
 	for _, field := range []string{"description", "name", "number"} {
 		if value, ok := propertyUpdate(body, field); ok {
 			if value == nil {
-				delete(definition, field)
+				delete(target, field)
 			} else {
-				definition[field] = value
+				target[field] = value
 			}
 		}
 	}
