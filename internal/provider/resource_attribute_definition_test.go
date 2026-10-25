@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -353,6 +354,59 @@ resource "bluestonepim_attribute_definition" "ean" {
 		resource.TestStep{
 			Config:      definition(`context_aware = true`),
 			ExpectError: regexpMustCompile("context_aware cannot be changed"),
+		},
+	)
+}
+
+// The description is sent with the create request, only changes afterwards
+// use the metadata endpoint.
+func TestAttributeDefinition_DescriptionOnCreate(t *testing.T) {
+	fake := fakebluestone.New(t)
+
+	countRequests := func(method, path string) int {
+		n := 0
+		for _, req := range fake.Requests() {
+			if req.Method == method && strings.HasPrefix(req.Path, path) {
+				n++
+			}
+		}
+		return n
+	}
+	definition := func(description string) string {
+		return config(fake, fmt.Sprintf(`
+resource "bluestonepim_attribute_definition" "ean" {
+  name        = "EAN"
+  data_type   = "text"
+  description = %q
+}
+`, description))
+	}
+
+	runTest(t,
+		resource.TestStep{
+			Config: definition("European Article Number"),
+			Check: func(s *terraform.State) error {
+				id, err := stateValue(s, "bluestonepim_attribute_definition.ean", "id")
+				if err != nil {
+					return err
+				}
+				if d := fake.Definition(id); d["description"] != "European Article Number" {
+					return fmt.Errorf("expected the description to be set on create, got %v", d["description"])
+				}
+				if n := countRequests("PATCH", "/pim/definitions/"); n != 0 {
+					return fmt.Errorf("expected no metadata update on create, got %d", n)
+				}
+				return nil
+			},
+		},
+		resource.TestStep{
+			Config: definition("Barcode"),
+			Check: func(s *terraform.State) error {
+				if n := countRequests("PATCH", "/pim/definitions/"); n != 1 {
+					return fmt.Errorf("expected one metadata update for the changed description, got %d", n)
+				}
+				return resource.TestCheckResourceAttr("bluestonepim_attribute_definition.ean", "description", "Barcode")(s)
+			},
 		},
 	)
 }

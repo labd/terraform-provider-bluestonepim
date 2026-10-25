@@ -51,6 +51,14 @@ func GetMatrixAttributeDefinitionByID(ctx context.Context, client pim.ClientWith
 	return result, nil
 }
 
+// createDto is the update request plus the description, which can only be set
+// on create (afterwards it is updated with the metadata endpoint).
+func createDto(resource *MatrixAttributeDefinition) pim.MatrixAttributeDefinitionDto {
+	dto := toDto(resource, nil)
+	dto.Description = resource.Description.ValueStringPointer()
+	return dto
+}
+
 func toDto(planned *MatrixAttributeDefinition, current *MatrixAttributeDefinition) pim.MatrixAttributeDefinitionDto {
 	var currentColumns, currentRows []attribute_definition.IdentifiableValue
 	if current != nil {
@@ -77,7 +85,7 @@ func toDto(planned *MatrixAttributeDefinition, current *MatrixAttributeDefinitio
 func CreateMatrixAttributeDefinition(ctx context.Context, client pim.ClientWithResponsesInterface, resource *MatrixAttributeDefinition) (*MatrixAttributeDefinition, diag.Diagnostic) {
 	resp, err := client.CreateMatrixDefinitionWithResponse(ctx,
 		&pim.CreateMatrixDefinitionParams{Validation: utils.Ref(pim.CreateMatrixDefinitionParamsValidationNAME)},
-		toDto(resource, nil),
+		createDto(resource),
 	)
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Unable to create matrix attribute definition", err.Error())
@@ -88,12 +96,6 @@ func CreateMatrixAttributeDefinition(ctx context.Context, client pim.ClientWithR
 	}
 
 	resourceId := resp.HTTPResponse.Header.Get("Resource-Id")
-
-	if !resource.Description.IsNull() {
-		if d := attribute_definition.UpdateDescription(ctx, client, resourceId, resource.Description); d != nil {
-			return nil, d
-		}
-	}
 
 	return getExisting(ctx, client, resourceId)
 }

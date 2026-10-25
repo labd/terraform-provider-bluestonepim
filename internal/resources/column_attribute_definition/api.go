@@ -50,6 +50,14 @@ func GetColumnAttributeDefinitionByID(ctx context.Context, client pim.ClientWith
 	return result, nil
 }
 
+// createDto is the update request plus the description, which can only be set
+// on create (afterwards it is updated with the metadata endpoint).
+func createDto(resource *ColumnAttributeDefinition) pim.ColumnAttributeDefinitionDto {
+	dto := toDto(resource, nil)
+	dto.Description = resource.Description.ValueStringPointer()
+	return dto
+}
+
 func toDto(planned *ColumnAttributeDefinition, current *ColumnAttributeDefinition) pim.ColumnAttributeDefinitionDto {
 	var currentColumns []attribute_definition.IdentifiableValue
 	if current != nil {
@@ -74,7 +82,7 @@ func toDto(planned *ColumnAttributeDefinition, current *ColumnAttributeDefinitio
 func CreateColumnAttributeDefinition(ctx context.Context, client pim.ClientWithResponsesInterface, resource *ColumnAttributeDefinition) (*ColumnAttributeDefinition, diag.Diagnostic) {
 	resp, err := client.CreateColumnDefinitionWithResponse(ctx,
 		&pim.CreateColumnDefinitionParams{Validation: utils.Ref(pim.CreateColumnDefinitionParamsValidationNAME)},
-		toDto(resource, nil),
+		createDto(resource),
 	)
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Unable to create column attribute definition", err.Error())
@@ -85,12 +93,6 @@ func CreateColumnAttributeDefinition(ctx context.Context, client pim.ClientWithR
 	}
 
 	resourceId := resp.HTTPResponse.Header.Get("Resource-Id")
-
-	if !resource.Description.IsNull() {
-		if d := attribute_definition.UpdateDescription(ctx, client, resourceId, resource.Description); d != nil {
-			return nil, d
-		}
-	}
 
 	return getExisting(ctx, client, resourceId)
 }

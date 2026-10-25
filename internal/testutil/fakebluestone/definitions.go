@@ -66,6 +66,10 @@ func (s *Server) createDefinition(w http.ResponseWriter, r *http.Request) {
 	if contextAware, ok := body["contextAware"].(bool); ok {
 		definition["contextAware"] = contextAware
 	}
+	// Only set on create, afterwards it is updated with the metadata endpoint
+	if description, ok := body["description"].(string); ok {
+		definition["description"] = description
+	}
 	s.applyDefinitionFields(definition, body)
 	if _, ok := definition["number"]; !ok {
 		definition["number"] = id

@@ -25,6 +25,14 @@ type SubDefinition struct {
 	Compound types.Bool   `tfsdk:"compound"`
 }
 
+// createDto is the update request plus the description, which can only be set
+// on create (afterwards it is updated with the metadata endpoint).
+func (c *CompoundAttributeDefinition) createDto() pim.CompoundAttributeDefinitionRequest {
+	dto := c.toDto()
+	dto.Description = c.Description.ValueStringPointer()
+	return dto
+}
+
 func (c *CompoundAttributeDefinition) toDto() pim.CompoundAttributeDefinitionRequest {
 	subDefinitions := make([]pim.CompoundAttributeSubDefinitionDto, 0, len(c.SubDefinitions))
 	for _, s := range c.SubDefinitions {

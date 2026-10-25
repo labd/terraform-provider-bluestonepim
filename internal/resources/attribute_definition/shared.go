@@ -15,9 +15,9 @@ import (
 	"github.com/labd/terraform-provider-bluestonepim/internal/utils"
 )
 
-// UpdateDescription sets the description of any attribute definition. The
-// description cannot be passed on create / update, it has to go through the
-// metadata endpoint.
+// UpdateDescription sets the description of any attribute definition. After
+// create the type specific update endpoints don't change the description, it
+// has to go through the metadata endpoint.
 func UpdateDescription(ctx context.Context, client pim.ClientWithResponsesInterface, id string, description types.String) diag.Diagnostic {
 	resU, err := client.UpdateMetadataWithResponse(ctx, id, &pim.UpdateMetadataParams{},
 		pim.UpdateMetadataJSONRequestBody{

@@ -107,6 +107,7 @@ func CreateAttributeDefinition(ctx context.Context, client pim.ClientWithRespons
 			Unit:           resource.Unit.ValueStringPointer(),
 			Restrictions:   ToRestrictionsDto(resource.Restrictions),
 			ContextAware:   utils.KnownBoolPointer(resource.ContextAware),
+			Description:    resource.Description.ValueStringPointer(),
 		},
 	)
 	if err != nil {
@@ -119,11 +120,6 @@ func CreateAttributeDefinition(ctx context.Context, client pim.ClientWithRespons
 	}
 
 	resourceId := resC.HTTPResponse.Header.Get("Resource-Id")
-
-	//Workaround because we cannot set description on create
-	if d := UpdateDescription(ctx, client, resourceId, resource.Description); d != nil {
-		return nil, d
-	}
 
 	result, d := GetAttributeDefinitionByID(ctx, client, resourceId)
 	if d == nil && result == nil {

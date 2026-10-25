@@ -32,7 +32,7 @@ func GetCompoundAttributeDefinitionByID(ctx context.Context, client pim.ClientWi
 func CreateCompoundAttributeDefinition(ctx context.Context, client pim.ClientWithResponsesInterface, resource *CompoundAttributeDefinition) (*CompoundAttributeDefinition, diag.Diagnostic) {
 	resp, err := client.CreateCompoundDefinitionWithResponse(ctx,
 		&pim.CreateCompoundDefinitionParams{Validation: utils.Ref(pim.CreateCompoundDefinitionParamsValidationNAME)},
-		resource.toDto(),
+		resource.createDto(),
 	)
 	if err != nil {
 		return nil, diag.NewErrorDiagnostic("Unable to create compound attribute definition", err.Error())
@@ -43,12 +43,6 @@ func CreateCompoundAttributeDefinition(ctx context.Context, client pim.ClientWit
 	}
 
 	resourceId := resp.HTTPResponse.Header.Get("Resource-Id")
-
-	if !resource.Description.IsNull() {
-		if d := attribute_definition.UpdateDescription(ctx, client, resourceId, resource.Description); d != nil {
-			return nil, d
-		}
-	}
 
 	return getExisting(ctx, client, resourceId)
 }
