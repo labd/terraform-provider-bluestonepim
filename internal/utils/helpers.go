@@ -14,3 +14,11 @@ func KnownStringPointer(v types.String) *string {
 	}
 	return v.ValueStringPointer()
 }
+
+// KnownBoolPointer returns nil for null and unknown values.
+func KnownBoolPointer(v types.Bool) *bool {
+	if v.IsNull() || v.IsUnknown() {
+		return nil
+	}
+	return v.ValueBoolPointer()
+}

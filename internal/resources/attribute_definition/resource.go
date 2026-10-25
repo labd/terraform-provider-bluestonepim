@@ -106,6 +106,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
+			"context_aware": ContextAwareSchema(),
 			"group_id": schema.StringAttribute{
 				MarkdownDescription: "The group ID of the attribute.",
 				Optional:            true,

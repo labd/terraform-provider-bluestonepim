@@ -47,8 +47,13 @@ func (s *Server) createDefinition(w http.ResponseWriter, r *http.Request) {
 	defer s.mu.Unlock()
 
 	id := s.newID()
-	definition := map[string]any{"id": id, "externalSource": false, "internal": false}
-	s.applyDefinitionFields(definition, bodyFrom(r.Context()))
+	body := bodyFrom(r.Context())
+	definition := map[string]any{"id": id, "externalSource": false, "internal": false, "contextAware": true}
+	// Only set on create, changing it has a separate endpoint
+	if contextAware, ok := body["contextAware"].(bool); ok {
+		definition["contextAware"] = contextAware
+	}
+	s.applyDefinitionFields(definition, body)
 	if _, ok := definition["number"]; !ok {
 		definition["number"] = id
 	}

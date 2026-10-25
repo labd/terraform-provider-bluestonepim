@@ -41,6 +41,7 @@ resource "bluestonepim_matrix_attribute_definition" "size_chart" {
 
 ### Optional
 
+- `context_aware` (Boolean) Whether the attribute can have a different value per context (language or channel). When `false` the attribute is global: it has one value, shared by all contexts. Uses the Bluestone default when not set. Cannot be changed after creation.
 - `description` (String) The description of the attribute definition.
 - `external_source` (Boolean) Whether the attribute is an external source.
 - `group_id` (String) The ID of the attribute group (see `bluestonepim_attribute_group`).

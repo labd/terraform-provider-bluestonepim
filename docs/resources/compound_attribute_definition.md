@@ -44,6 +44,7 @@ resource "bluestonepim_compound_attribute_definition" "quantity" {
 
 ### Optional
 
+- `context_aware` (Boolean) Whether the attribute can have a different value per context (language or channel). When `false` the attribute is global: it has one value, shared by all contexts. Uses the Bluestone default when not set. Cannot be changed after creation.
 - `description` (String) The description of the attribute definition.
 - `external_source` (Boolean) Whether the attribute is an external source.
 - `format` (List of String) The display format of the compound attribute, combining the sub definition values with hard-coded texts.

@@ -42,6 +42,7 @@ func GetColumnAttributeDefinitionByID(ctx context.Context, client pim.ClientWith
 		ExternalSource: types.BoolPointerValue(resource.ExternalSource),
 		GroupID:        types.StringPointerValue(resource.GroupId),
 		Internal:       types.BoolPointerValue(resource.Internal),
+		ContextAware:   types.BoolPointerValue(resource.ContextAware),
 	}
 	if resource.Restrictions != nil && resource.Restrictions.Column != nil {
 		result.Columns = attribute_definition.FromIdentifiableValueDtos(resource.Restrictions.Column.Columns)
@@ -59,6 +60,7 @@ func toDto(planned *ColumnAttributeDefinition, current *ColumnAttributeDefinitio
 		ExternalSource: planned.ExternalSource.ValueBoolPointer(),
 		GroupId:        planned.GroupID.ValueStringPointer(),
 		Internal:       planned.Internal.ValueBoolPointer(),
+		ContextAware:   utils.KnownBoolPointer(planned.ContextAware),
 		Name:           planned.Name.ValueStringPointer(),
 		Number:         utils.KnownStringPointer(planned.Number),
 		Restrictions: &pim.ColumnRestrictionDto{

@@ -143,5 +143,6 @@ func CommonSchemaAttributes() map[string]schema.Attribute {
 			MarkdownDescription: "The ID of the attribute group (see `bluestonepim_attribute_group`).",
 			Optional:            true,
 		},
+		"context_aware": ContextAwareSchema(),
 	}
 }

@@ -42,6 +42,7 @@ func GetMatrixAttributeDefinitionByID(ctx context.Context, client pim.ClientWith
 		ExternalSource: types.BoolPointerValue(resource.ExternalSource),
 		GroupID:        types.StringPointerValue(resource.GroupId),
 		Internal:       types.BoolPointerValue(resource.Internal),
+		ContextAware:   types.BoolPointerValue(resource.ContextAware),
 	}
 	if resource.Restrictions != nil && resource.Restrictions.Matrix != nil {
 		result.Columns = attribute_definition.FromIdentifiableValueDtos(resource.Restrictions.Matrix.Columns)
@@ -61,6 +62,7 @@ func toDto(planned *MatrixAttributeDefinition, current *MatrixAttributeDefinitio
 		ExternalSource: planned.ExternalSource.ValueBoolPointer(),
 		GroupId:        planned.GroupID.ValueStringPointer(),
 		Internal:       planned.Internal.ValueBoolPointer(),
+		ContextAware:   utils.KnownBoolPointer(planned.ContextAware),
 		Name:           planned.Name.ValueStringPointer(),
 		Number:         utils.KnownStringPointer(planned.Number),
 		Restrictions: &pim.MatrixRestrictionDto{

@@ -15,6 +15,7 @@ type CompoundAttributeDefinition struct {
 	ExternalSource types.Bool      `tfsdk:"external_source"`
 	GroupID        types.String    `tfsdk:"group_id"`
 	Internal       types.Bool      `tfsdk:"internal"`
+	ContextAware   types.Bool      `tfsdk:"context_aware"`
 	Format         []types.String  `tfsdk:"format"`
 	SubDefinitions []SubDefinition `tfsdk:"sub_definitions"`
 }
@@ -47,6 +48,7 @@ func (c *CompoundAttributeDefinition) toDto() pim.CompoundAttributeDefinitionReq
 		Format:         format,
 		GroupId:        c.GroupID.ValueStringPointer(),
 		Internal:       c.Internal.ValueBoolPointer(),
+		ContextAware:   utils.KnownBoolPointer(c.ContextAware),
 		Name:           c.Name.ValueStringPointer(),
 		Number:         utils.KnownStringPointer(c.Number),
 		SubDefinitions: &subDefinitions,
@@ -62,6 +64,7 @@ func fromResponse(r *pim.CompoundAttributeDefinitionResponse) *CompoundAttribute
 		ExternalSource: types.BoolPointerValue(r.ExternalSource),
 		GroupID:        types.StringPointerValue(r.GroupId),
 		Internal:       types.BoolPointerValue(r.Internal),
+		ContextAware:   types.BoolPointerValue(r.ContextAware),
 	}
 
 	if r.Format != nil && len(*r.Format) > 0 {
