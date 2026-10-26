@@ -1,0 +1,3 @@
+kind: Dependency
+body: Update Go dependencies (bluestonepim-go-sdk) and drop the Go patch version from go.mod
+time: 2026-10-26T10:00:00.000000+01:00

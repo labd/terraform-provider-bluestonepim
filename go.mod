@@ -1,6 +1,6 @@
 module github.com/labd/terraform-provider-bluestonepim
 
-go 1.27.3
+go 1.27
 
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.8
@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	github.com/labd/bluestonepim-go-sdk v0.0.0-20261024100259-8661a152ac62
+	github.com/labd/bluestonepim-go-sdk v0.0.0-20261025191408-1b04bc6590a0
 	golang.org/x/oauth2 v0.37.0
 )
 
