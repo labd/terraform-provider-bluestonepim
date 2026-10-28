@@ -1,8 +1,12 @@
 # Bluestone PIM Terraform Provider
 
-The Terraform provider allows you to configure your
-[Bluestone PIM](https://www.bluestonepim.com/) project with infrastructure-as-code
-principles.
+Stop clicking through the UI to keep your environments in sync. This provider
+lets you manage your [Bluestone PIM](https://www.bluestonepim.com/) data model as
+code: version it in Git, review changes in pull requests, and promote the exact
+same configuration from development to production with `terraform apply`.
+
+Define attribute definitions, attribute groups, categories, contexts, relations
+and webhooks declaratively, and let Terraform take care of the rest.
 
 # Commercial support
 
